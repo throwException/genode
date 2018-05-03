@@ -24,6 +24,7 @@ import_from_depot genodelabs/src/[base_src] \
                   genodelabs/src/qt5_qpa_nitpicker \
                   genodelabs/src/report_rom \
                   genodelabs/src/stdcxx \
+                  genodelabs/src/vfs \
                   genodelabs/src/wm \
                   genodelabs/src/zlib \
                   genodelabs/raw/qt5_dejavusans

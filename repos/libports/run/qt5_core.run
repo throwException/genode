@@ -7,6 +7,7 @@ import_from_depot genodelabs/src/[base_src] \
                   genodelabs/src/qt5_component \
                   genodelabs/src/qt5_core \
                   genodelabs/src/stdcxx \
+                  genodelabs/src/vfs \
                   genodelabs/src/zlib \
                   genodelabs/src/test-qt_core
 
