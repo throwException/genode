@@ -288,7 +288,7 @@ class Gpt : public Block::Partition_table
 		 *
 		 * \return the number of used blocks
 		 */
-		Genode::uint64_t _calculate_used(Gpt_hdr const *header,
+		Genode::uint64_t _calculate_used(Gpt_hdr const *,
 		                                 Gpt_entry const *entries,
 		                                 Genode::uint32_t num)
 		{
