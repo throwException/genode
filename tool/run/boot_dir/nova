@@ -91,7 +91,7 @@ proc run_boot_dir {binaries} {
 		puts $fh "set timeout=0"
 		# tell grub2 to prefer 32bit framebuffer resolution
 		puts $fh "set gfxpayload=\"0x0x32\""
-		puts $fh "menuentry 'Genode on NOVA' {"
+		puts $fh "menuentry 'OS' {"
 		puts $fh " insmod multiboot2"
 		puts $fh " insmod gzio"
 		puts $fh " multiboot2 /boot/bender $serial_bender_opt"
