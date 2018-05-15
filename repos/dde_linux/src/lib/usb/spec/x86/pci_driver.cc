@@ -147,7 +147,7 @@ extern "C" int pci_register_driver(struct pci_driver *driver)
 		 * access the USB controller after bootup. For this the ext cap register of
 		 * the PCI config space is checked
 		 */
-		if (Lx_kit::env().config_rom().xml().attribute_value("bios_handoff", true))
+		if (Lx_kit::env().config_rom().xml().attribute_value("bios_handoff", false))
 			__pci_fixup_quirk_usb_early_handoff(pci_dev);
 
 		/* call probe function of the Linux driver */
