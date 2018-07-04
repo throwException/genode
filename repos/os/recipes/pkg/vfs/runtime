@@ -1,5 +1,6 @@
 <runtime ram="32M" caps="200" binary="vfs">
 
+	<requires> <file_system/> </requires>
 	<provides> <file_system/> </provides>
 
 	<config/>
