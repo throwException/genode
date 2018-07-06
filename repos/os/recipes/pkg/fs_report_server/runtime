@@ -1,0 +1,61 @@
+<runtime ram="32M" caps="1000" binary="init">
+
+	<provides>
+		<report/>
+		<rom/>
+	</provides>
+
+	<content>
+		<rom label="ld.lib.so"/>
+		<rom label="ram_fs"/>
+		<rom label="fs_report"/>
+		<rom label="fs_rom"/>
+		<rom label="vfs.lib.so"/>
+	</content>
+
+	<config>
+		<parent-provides>
+			<service name="CPU"/>
+			<service name="LOG"/>
+			<service name="PD"/>
+			<service name="ROM"/>
+		</parent-provides>
+
+		<default-route>
+			<any-service> <parent/> <any-child/> </any-service>
+		</default-route>
+
+		<default caps="100"/>
+  
+		<service name="ROM">
+    	<default-policy> <child name="fs_rom"/> </default-policy>
+	  </service>
+
+  	<service name="Report">
+    	<default-policy> <child name="fs_report"/> </default-policy>
+	  </service>
+
+		<start name="ram_fs">
+			<resource name="RAM" quantum="4M"/>
+			<provides> <service name="File_system"/> </provides>
+			<config>
+				<content>
+				</content>
+				<policy label_prefix="fs_report -> " root="/" writeable="yes"/>
+				<policy label_prefix="fs_rom -> "    root="/" writeable="no"/>
+			</config>
+		</start>
+
+		<start name="fs_report">
+			<resource name="RAM" quantum="4M"/>
+			<provides> <service name="Report"/> </provides>
+			<config> <vfs> <fs/> </vfs> </config>
+		</start>
+
+		<start name="fs_rom">
+			<resource name="RAM" quantum="4M"/>
+			<provides> <service name="ROM"/> </provides>
+			<config/>
+		</start>
+	</config>
+</runtime>

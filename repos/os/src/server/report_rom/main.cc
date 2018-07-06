@@ -41,8 +41,29 @@ struct Report_rom::Main
 	Report::Root report_root { env, sliced_heap, rom_registry, verbose };
 	Rom   ::Root    rom_root { env, sliced_heap, rom_registry };
 
+	long compute (long x)
+	{
+		long r = 1;
+
+		for (long i = 2; i < x; i++) {
+			for (long j = 2; j < x; j++) {
+				r = (r * i * j) % 1337;
+			}
+		}
+
+		return r;
+	}
+
 	Main(Genode::Env &env) : env(env)
 	{
+/*
+		long c = 0;
+		for (long i = 100; i < 2000; i++) {
+			c += compute(i);
+		}
+		Genode::log(c);
+*/
+
 		env.parent().announce(env.ep().manage(report_root));
 		env.parent().announce(env.ep().manage(rom_root));
 	}
