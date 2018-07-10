@@ -36,19 +36,15 @@ struct Test::Main
 	Timer::Connection _timer { _env };
 	int _value = 0;
 
-	Reporter _brightness_reporter { _env, "brightness" };
-
-	void _report_brightness(int value)
-	{
-		Reporter::Xml_generator xml(_brightness_reporter, [&] () {
-			xml.attribute("value", value); });
-	}
+	Expanding_reporter _reporter { _env, "config", "brightness" };
 
 	void _handle_timer()
 	{
 		log("reporting...");
 		_value++;
-		_report_brightness(_value);
+		_reporter.generate([&] (Xml_generator &xml) {
+			xml.attribute("value", _value);
+		});
 		log("reported: ", _value);
 	}
 
