@@ -1,0 +1,66 @@
+#!/usr/bin/make -f
+
+#
+# \brief  Tool for updating current version of package
+# \author Stefan Thoeni
+# \date   2018-07-02
+#
+
+define HELP_MESSAGE
+
+  Find and sign current version information
+
+  usage:
+
+    $(firstword $(MAKEFILE_LIST)) <archive-path> {PUBLIC_DIR=<public>}
+
+  The <archive-path> denotes the archives (and implicitly their
+  dependencies) to publish from the depot to the public directory.
+  It must be given witout the version number of the package archive.
+
+  This tool does not touch any Genode source repository. It solely
+  reads from the depot and writes to the public directory.
+
+  The optional 'PUBLIC_DIR' argument defines the location of the public
+  directory. If not specified, '<genode-dir>/public/' is used.
+
+endef
+
+export GENODE_DIR := $(realpath $(dir $(MAKEFILE_LIST))/../..)
+
+PUBLIC_DIR ?= $(GENODE_DIR)/public
+
+include $(GENODE_DIR)/tool/depot/mk/front_end.inc
+
+#
+# Current version file and sign it
+#
+
+include $(GENODE_DIR)/tool/depot/mk/gpg.inc
+
+ARCHIVES := $(MAKECMDGOALS)
+
+MISSING_PUBKEY_FILES := $(sort \
+                           $(foreach A,$(ARCHIVES),\
+                              $(if $(call pubkey_path,$A),,\
+                                 $(DEPOT_DIR)/$(call pubkey_filename,$A))))
+
+TARGETS := $(addsuffix /current,$(addprefix $(PUBLIC_DIR)/,$(ARCHIVES))) \
+           $(addsuffix /current.sig,$(addprefix $(PUBLIC_DIR)/,$(ARCHIVES)))
+
+$(PUBLIC_DIR)/%/current.sig : $(PUBLIC_DIR)/%/current
+	$(VERBOSE)gpg --detach-sign --digest-algo SHA256 --no-tty --yes --use-agent --local-user $(call pubkey_id,$*) $<
+
+pkg_current = $(lastword $(sort $(shell ls $1)))
+
+$(PUBLIC_DIR)/%/current : $(DEPOT_DIR)/%
+	@$(ECHO) "$(DARK_COL)current of$(DEFAULT_COL) $@"
+	$(VERBOSE)echo "$(call archive_type,$*)/$(call archive_recipe,$*)/$(call pkg_current,$<)" > $@
+
+ifneq ($(MISSING_PUBKEY_FILES),)
+$(MAKECMDGOALS) $(TARGETS): missing_pubkey_files
+endif
+
+$(MAKECMDGOALS): $(TARGETS)
+	@true
+
