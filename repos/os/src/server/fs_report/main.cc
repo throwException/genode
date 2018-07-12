@@ -79,6 +79,7 @@ class Fs_report::Session_component : public Genode::Rpc_object<Report::Session>
 
 		file_size _file_size = 0;
 		bool      _success   = true;
+		bool      _verbose   = false;
 
 		struct Open_failed { };
 
@@ -116,6 +117,13 @@ class Fs_report::Session_component : public Genode::Rpc_object<Report::Session>
 			handle->close();
 		}
 
+		static void _log_lines(char const *string, size_t len)
+		{
+			Genode::print_lines<200>(string, len,
+			                         [&] (char const *line)
+			                         { Genode::log("  ", line); });
+		}
+
 		/*
 		 * Noncopyable
 		 */
@@ -128,11 +136,13 @@ class Fs_report::Session_component : public Genode::Rpc_object<Report::Session>
 		                  Genode::Allocator           &alloc,
 		                  Vfs::File_system            &vfs,
 		                  Genode::Session_label const &label,
-		                  size_t                       buffer_size)
+		                  size_t                       buffer_size,
+		                  bool                         verbose)
 		:
 			_ep(env.ep()), _alloc(alloc), _vfs(vfs),
 			_ds(env.ram(), env.rm(), buffer_size),
-			_path(path_from_label<Path>(label.string()))
+			_path(path_from_label<Path>(label.string())),
+			_verbose(verbose)
 		{
 			create_parent_dir(_vfs, _path, _alloc);
 		}
@@ -143,6 +153,11 @@ class Fs_report::Session_component : public Genode::Rpc_object<Report::Session>
 
 		void submit(size_t const length) override
 		{
+			if (_verbose) {
+				Genode::log("report '", _path, "'");
+				_log_lines(_ds.local_addr<char>(), length);
+			}
+
 			auto fn = [&] (Vfs_handle *handle) {
 
 				typedef Vfs::File_io_service::Write_result Write_result;
@@ -192,6 +207,7 @@ class Fs_report::Root : public Genode::Root_component<Session_component>
 		Genode::Heap  _heap { &_env.ram(), &_env.rm() };
 
 		Genode::Attached_rom_dataspace _config_rom { _env, "config" };
+		bool _verbose = false;
 
 		Genode::Xml_node vfs_config()
 		{
@@ -211,6 +227,7 @@ class Fs_report::Root : public Genode::Root_component<Session_component>
 		void _config_update()
 		{
 			_config_rom.update();
+			_verbose = _config_rom.xml().attribute_value("verbose", false);
 			_vfs_env.root_dir().apply_config(vfs_config());
 		}
 
@@ -241,7 +258,7 @@ class Fs_report::Root : public Genode::Root_component<Session_component>
 			}
 
 			return new (md_alloc())
-				Session_component(_env, _heap, _vfs_env.root_dir(), label, buffer_size);
+				Session_component(_env, _heap, _vfs_env.root_dir(), label, buffer_size, _verbose);
 		}
 
 	public:
@@ -250,7 +267,9 @@ class Fs_report::Root : public Genode::Root_component<Session_component>
 		:
 			Genode::Root_component<Session_component>(env.ep(), md_alloc),
 			_env(env)
-		{ }
+		{
+			_config_update();
+		}
 };
 
 
