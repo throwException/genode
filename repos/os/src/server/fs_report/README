@@ -1,0 +1,14 @@
+The "fs_report" component write submitted reports to the file system as
+individual files.
+
+Configuration
+-------------
+
+The component needs a configured virtual file system (vfs).
+
+! <config verbose="yes">
+! 	<vfs><fs/></vfs>
+! </config>
+
+The component can be configured to write all incoming reports to the LOG
+output by setting the 'verbose' attribute of the '<config>' node to "yes".
