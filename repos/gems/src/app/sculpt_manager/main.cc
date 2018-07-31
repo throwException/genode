@@ -31,6 +31,7 @@
 #include <keyboard_focus.h>
 #include <network.h>
 #include <storage.h>
+#include <topology.h>
 #include <deploy.h>
 #include <graph.h>
 
@@ -161,6 +162,9 @@ struct Sculpt::Main : Input_event_handler,
 
 
 	Network _network { _env, _heap, *this, *this, _runtime_state, _pci_info };
+
+
+	Topology _topology { _env, _heap, *this };
 
 
 	/************
@@ -306,7 +310,7 @@ struct Sculpt::Main : Input_event_handler,
 	Signal_handler<Main> _hover_handler {
 		_env.ep(), *this, &Main::_handle_hover };
 
-	struct Hovered { enum Dialog { NONE, LOGO, STORAGE, NETWORK, RUNTIME } value; };
+	struct Hovered { enum Dialog { NONE, LOGO, STORAGE, NETWORK, RUNTIME, TOPOLOGY } value; };
 
 	Hovered::Dialog _hovered_dialog { Hovered::NONE };
 
@@ -315,6 +319,7 @@ struct Sculpt::Main : Input_event_handler,
 	{
 		if (dialog == Hovered::STORAGE) fn(_storage.dialog);
 		if (dialog == Hovered::NETWORK) fn(_network.dialog);
+		if (dialog == Hovered::TOPOLOGY) fn(_topology.dialog);
 	}
 
 	void _handle_hover();
@@ -340,6 +345,7 @@ struct Sculpt::Main : Input_event_handler,
 
 				_storage.dialog.generate(xml, storage_dialog_expanded);
 				_network.dialog.generate(xml);
+				_topology.dialog.generate(xml);
 
 				gen_named_node(xml, "frame", "runtime", [&] () {
 					xml.node("vbox", [&] () {
@@ -476,6 +482,7 @@ struct Sculpt::Main : Input_event_handler,
 			if (_hovered_dialog == Hovered::STORAGE) _storage.dialog.click(_storage);
 			if (_hovered_dialog == Hovered::NETWORK) _network.dialog.click(_network);
 			if (_hovered_dialog == Hovered::RUNTIME) _network.dialog.click(_network);
+			if (_hovered_dialog == Hovered::TOPOLOGY) _topology.dialog.click(_topology);
 
 			/* remove popup dialog when clicking somewhere outside */
 			if (!_popup_dialog.hovered() && _popup.state == Popup::VISIBLE
@@ -958,6 +965,7 @@ void Sculpt::Main::_handle_hover()
 		query_attribute<Top_level_frame>(hover, "dialog", "vbox", "frame", "name");
 
 	_hovered_dialog = Hovered::NONE;
+	if (top_level_frame == "topology") _hovered_dialog = Hovered::TOPOLOGY;
 	if (top_level_frame == "network") _hovered_dialog = Hovered::NETWORK;
 	if (top_level_frame == "storage") _hovered_dialog = Hovered::STORAGE;
 	if (top_level_frame == "runtime") _hovered_dialog = Hovered::RUNTIME;
