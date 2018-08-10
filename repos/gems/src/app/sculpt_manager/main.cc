@@ -31,6 +31,7 @@
 #include <keyboard_focus.h>
 #include <network.h>
 #include <storage.h>
+#include <framebuffer.h>
 #include <topology.h>
 #include <deploy.h>
 #include <graph.h>
@@ -162,6 +163,9 @@ struct Sculpt::Main : Input_event_handler,
 
 
 	Network _network { _env, _heap, *this, *this, _runtime_state, _pci_info };
+
+
+	Framebuffer _framebuffer { _env, _heap, *this };
 
 
 	Topology _topology { _env, _heap, *this };
@@ -310,16 +314,17 @@ struct Sculpt::Main : Input_event_handler,
 	Signal_handler<Main> _hover_handler {
 		_env.ep(), *this, &Main::_handle_hover };
 
-	struct Hovered { enum Dialog { NONE, LOGO, STORAGE, NETWORK, RUNTIME, TOPOLOGY } value; };
+	struct Hovered { enum Dialog { NONE, LOGO, STORAGE, NETWORK, RUNTIME, FRAMEBUFFER, TOPOLOGY } value; };
 
 	Hovered::Dialog _hovered_dialog { Hovered::NONE };
 
 	template <typename FN>
 	void _apply_to_hovered_dialog(Hovered::Dialog dialog, FN const &fn)
 	{
-		if (dialog == Hovered::STORAGE) fn(_storage.dialog);
-		if (dialog == Hovered::NETWORK) fn(_network.dialog);
-		if (dialog == Hovered::TOPOLOGY) fn(_topology.dialog);
+		if (dialog == Hovered::STORAGE)     fn(_storage.dialog);
+		if (dialog == Hovered::NETWORK)     fn(_network.dialog);
+		if (dialog == Hovered::FRAMEBUFFER) fn(_framebuffer.dialog);
+		if (dialog == Hovered::TOPOLOGY)    fn(_topology.dialog);
 	}
 
 	void _handle_hover();
@@ -345,6 +350,7 @@ struct Sculpt::Main : Input_event_handler,
 
 				_storage.dialog.generate(xml, storage_dialog_expanded);
 				_network.dialog.generate(xml);
+				_framebuffer.dialog.generate(xml);
 				_topology.dialog.generate(xml);
 
 				gen_named_node(xml, "frame", "runtime", [&] () {
@@ -479,10 +485,9 @@ struct Sculpt::Main : Input_event_handler,
 				_handle_window_layout();
 			}
 
-			if (_hovered_dialog == Hovered::STORAGE) _storage.dialog.click(_storage);
-			if (_hovered_dialog == Hovered::NETWORK) _network.dialog.click(_network);
-			if (_hovered_dialog == Hovered::RUNTIME) _network.dialog.click(_network);
-			if (_hovered_dialog == Hovered::TOPOLOGY) _topology.dialog.click(_topology);
+			if (_hovered_dialog == Hovered::STORAGE)     _storage.dialog.click(_storage);
+			if (_hovered_dialog == Hovered::NETWORK)     _network.dialog.click(_network);
+			if (_hovered_dialog == Hovered::TOPOLOGY)    _topology.dialog.click(_topology);
 
 			/* remove popup dialog when clicking somewhere outside */
 			if (!_popup_dialog.hovered() && _popup.state == Popup::VISIBLE
@@ -767,7 +772,7 @@ void Sculpt::Main::_handle_window_layout()
 	if (!_nitpicker.constructed())
 		return;
 
-	Framebuffer::Mode const mode = _nitpicker->mode();
+	::Framebuffer::Mode const mode = _nitpicker->mode();
 
 	/* area preserved for the menu */
 	Rect const menu(Point(0, 0), Area(_gui.menu_width, mode.height()));
@@ -898,7 +903,7 @@ void Sculpt::Main::_handle_nitpicker_mode()
 	if (!_nitpicker.constructed())
 		return;
 
-	Framebuffer::Mode const mode = _nitpicker->mode();
+	::Framebuffer::Mode const mode = _nitpicker->mode();
 
 	_handle_window_layout();
 
@@ -965,11 +970,12 @@ void Sculpt::Main::_handle_hover()
 		query_attribute<Top_level_frame>(hover, "dialog", "vbox", "frame", "name");
 
 	_hovered_dialog = Hovered::NONE;
-	if (top_level_frame == "topology") _hovered_dialog = Hovered::TOPOLOGY;
-	if (top_level_frame == "network") _hovered_dialog = Hovered::NETWORK;
-	if (top_level_frame == "storage") _hovered_dialog = Hovered::STORAGE;
-	if (top_level_frame == "runtime") _hovered_dialog = Hovered::RUNTIME;
-	if (top_level_frame == "logo")    _hovered_dialog = Hovered::LOGO;
+	if (top_level_frame == "topology")    _hovered_dialog = Hovered::TOPOLOGY;
+	if (top_level_frame == "framebuffer") _hovered_dialog = Hovered::FRAMEBUFFER;
+	if (top_level_frame == "network")     _hovered_dialog = Hovered::NETWORK;
+	if (top_level_frame == "storage")     _hovered_dialog = Hovered::STORAGE;
+	if (top_level_frame == "runtime")     _hovered_dialog = Hovered::RUNTIME;
+	if (top_level_frame == "logo")        _hovered_dialog = Hovered::LOGO;
 
 	if (orig_hovered_dialog != _hovered_dialog)
 		_apply_to_hovered_dialog(orig_hovered_dialog, [&] (Dialog &dialog) {
