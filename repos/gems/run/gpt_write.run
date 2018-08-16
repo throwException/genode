@@ -45,11 +45,11 @@ install_config {
 			<actions>
 				<add entry="1" type="BIOS"  label="GRUB BIOS"  start="2048"  size="1M"/>
 				<add entry="2" type="EFI"   label="EFI System" start="4096"  size="16M"/>
-				<add entry="3" type="Linux" label="GENODE"     start="36864" size="128M"/>
+				<add entry="3" type="Linux" label="GAPFRUIT"   start="36864" size="128M"/>
 				<add           type="BDP"   label="FAT32 Data" size="max"/>
 				<delete entry="1"/>
 				<delete label="FAT32 Data"/>
-				<modify label="GENODE" new_label="GENODE*" new_size="max"/>
+				<modify label="GAPFRUIT" new_label="GAPFRUIT*" new_size="max"/>
 			</actions>
 		</config>
 	</start>

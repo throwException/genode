@@ -79,13 +79,13 @@ struct Sculpt::Partition : List_model<Partition>::Element
 	                        && !file_system_inspected
 	                        && !relabel_in_progress(); }
 
-	bool genode_default() const { return label == "GENODE*"; }
-	bool genode()         const { return label == "GENODE" || genode_default(); }
+	bool genode_default() const { return label == "GAPFRUIT*"; }
+	bool genode()         const { return label == "GAPFRUIT" || genode_default(); }
 
 	void toggle_default_label()
 	{
-		if (label == "GENODE")  next_label = Label("GENODE*");
-		if (label == "GENODE*") next_label = Label("GENODE");
+		if (label == "GAPFRUIT")  next_label = Label("GAPFRUIT*");
+		if (label == "GAPFRUIT*") next_label = Label("GAPFRUIT");
 	}
 
 	struct Args

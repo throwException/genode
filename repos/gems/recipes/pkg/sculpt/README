@@ -629,13 +629,13 @@ it is possible to mark one file system as default. At boot time - when the
 Sculpt manager discovers the attached storage devices - it automatically
 selects a file system for use according to the following order of preference:
 
-# Partition labeled as "GENODE*" on a USB device,
-# Partition labeled as "GENODE*" on a SATA or NVMe storage device,
+# Partition labeled as "GAPFRUIT*" on a USB device,
+# Partition labeled as "GAPFRUIT*" on a SATA or NVMe storage device,
 # An entire SATA or NVMe device used as a single EXT2 file system (as devised
   by Sculpt EA).
 
 The storage dialog hosts a convenient "Default" button that allows one
-to toggle a partition label between "GENODE" and "GENODE*". For example,
+to toggle a partition label between "GAPFRUIT" and "GAPFRUIT*". For example,
 the last partition of the Sculpt USB stick can be marked as default or
 non-default using this button.
 
