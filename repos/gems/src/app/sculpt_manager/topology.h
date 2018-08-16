@@ -64,7 +64,7 @@ struct Sculpt::Topology : Topology_dialog::Action
 						xml.attribute("value", slice.name);
 						xml.node("set-attribute", [&] () {
 							xml.attribute("name", "enable");
-							if (slice.name == name) {
+							if ((slice.name == name) || (slice.parent == name)) {
 								// toggle the enable state of the given slice
 								slice.enable = !slice.enable;
 							}

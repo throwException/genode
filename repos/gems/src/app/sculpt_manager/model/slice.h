@@ -27,10 +27,11 @@ struct Sculpt::Slice : List_model<Slice>::Element
 	typedef String<32> Name;
 
 	Name const name;
+	Name const parent;
 	bool       enable;
 
-	Slice(Name const &name, bool enable)
-	: name(name), enable(enable) { }
+	Slice(Name const &name, Name const &parent, bool enable)
+	: name(name), parent(parent), enable(enable) { }
 };
 
 
@@ -49,6 +50,7 @@ struct Sculpt::Slice_update_policy : List_model<Slice>::Update_policy
 	{
 		return *new (_alloc)
 			Slice(node.attribute_value("name", Slice::Name()),
+			      node.attribute_value("parent", Slice::Name()),
 			      node.attribute_value("enable", true));
 	}
 

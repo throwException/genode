@@ -38,7 +38,10 @@ void Sculpt::Topology_dialog::generate(Xml_generator &xml) const
 				};
 
 				_slices.for_each([&] (Slice const &slice) {
-					 gen_slice_button(slice.name, slice.enable); });
+					if (slice.parent == "") {
+						gen_slice_button(slice.name, slice.enable); 
+					}
+				});
 			});
 		});
 	});
