@@ -66,7 +66,7 @@ struct Sculpt::Discovery_state
 			return Storage_target { };
 
 		/*
-		 * Search for a partition with the magic label "GENODE*", or - if no
+		 * Search for a partition with the magic label "GAPFRUIT*", or - if no
 		 * such partition is present - a whole-device file system.
 		 *
 		 * Prefer USB storage devices over block devices. If no partition with
@@ -78,7 +78,7 @@ struct Sculpt::Discovery_state
 
 			device.for_each_partition([&] (Partition const &partition) {
 				if (!partition.whole_device()
-				 && partition.label == "GENODE*"
+				 && partition.label == "GAPFRUIT*"
 				 && partition.file_system.accessible())
 					target = Storage_target { device.label, partition.number }; });
 		};

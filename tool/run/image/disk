@@ -38,7 +38,7 @@ proc run_image { {unused ""} } {
 
 	# setup partition with content
 	exec dd if=/dev/zero of=[run_dir].partition bs=1k count=$disk_size_kb 2>/dev/null
-	exec [installed_command mkfs.ext2] -L GENODE -q -T default [run_dir].partition
+	exec [installed_command mkfs.ext2] -L GAPFRUIT -q -T default [run_dir].partition
 
 	# copy content to disk image
 	foreach file [exec find [run_dir]] {
@@ -78,7 +78,7 @@ proc run_image { {unused ""} } {
 
 	# create partition table entry pointing to the content
 	exec $sgdisk --new=3:$first_sector:$last_sector [run_dir].img
-	exec $sgdisk --change-name=3:GENODE [run_dir].img
+	exec $sgdisk --change-name=3:GAPFRUIT [run_dir].img
 
 	# create hybrid MBR
 	exec $sgdisk --hybrid [run_dir].img
