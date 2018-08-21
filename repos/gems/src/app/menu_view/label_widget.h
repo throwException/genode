@@ -63,11 +63,11 @@ struct Menu_view::Label_widget : Widget
 
 		Text_painter::paint(pixel_surface,
 		                    Text_painter::Position(centered.x(), centered.y()),
-		                    *font, Color(0, 0, 0), text.string());
+		                    *font, Color(255, 255, 255), text.string());
 
 		Text_painter::paint(alpha_surface,
 		                    Text_painter::Position(centered.x(), centered.y()),
-		                    *font, Color(255, 255, 255), text.string());
+		                    *font, Color(0, 0, 0), text.string());
 	}
 
 	private:
