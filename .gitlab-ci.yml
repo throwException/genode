@@ -1,0 +1,105 @@
+stages:
+    - sdk-base
+    - prepare
+    - sdk-sculpt
+
+
+variables:
+    SDK_BASE_CACHE:   "$CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/sdk/base:cache"
+    SDK_BASE_IMAGE:   "$CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/sdk/base:pipeline-$CI_PIPELINE_IID"
+    SDK_SCULPT_IMAGE: "$CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/sdk/sculpt:pipeline-$CI_PIPELINE_IID"
+
+
+sdk-base:
+    stage: sdk-base
+    image: docker:stable
+    services:
+        - docker:dind
+    variables:
+        DOCKER_DRIVER: overlay2
+    before_script:
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    script:
+        - docker pull $SDK_BASE_CACHE || true
+        - docker build --cache-from $SDK_BASE_CACHE
+                              --tag $SDK_BASE_CACHE
+                              --tag $SDK_BASE_IMAGE
+                              --target base
+                              -f docker/sdk/Dockerfile .
+        - docker push $SDK_BASE_CACHE
+        - docker push $SDK_BASE_IMAGE
+
+
+.prepare_template: &prepare_definition
+    stage: prepare
+    image: $SDK_BASE_IMAGE
+    script:
+        - "parallel tool/ports/prepare_port ::: $PORTS"
+    cache:
+        key: ${CI_JOB_NAME}
+        paths:
+            - contrib/*.tar.xz
+    artifacts:
+        paths:
+            - contrib/*.tar.xz
+
+base:
+    variables:
+        PORTS: "grub2 nova"
+    <<: *prepare_definition
+
+dde:
+    variables:
+        PORTS: "dde_ipxe dde_linux dde_rump"
+    <<: *prepare_definition
+
+libports:
+    variables:
+        PORTS: "acpica curl drm expat freetype jpeg libarchive libc libgcrypt libiconv libpng \
+                libssh mesa ncurses openssl pcre qemu-usb qoost stb stdcxx ttf-bitstream-vera \
+                x86emu xz zlib jitterentropy"
+    <<: *prepare_definition
+
+ports:
+    variables:
+        PORTS: "bash coreutils e2fsprogs gnupg vim virtualbox5"
+    <<: *prepare_definition
+
+qt5:
+    <<: *prepare_definition
+    before_script:
+        - TOOLCHAIN_HASH="$(cat repos/libports/ports/qt5-host.hash)"
+        - TOOLCHAIN_ARCHIVE="$(echo genode-qt5-$TOOLCHAIN_HASH).tar.xz"
+        - mkdir -p toolchain
+    script:
+        - if ! tar xPf toolchain/$TOOLCHAIN_ARCHIVE; then
+              tool/tool_chain_qt5 build install MAKE_JOBS=4;
+              tar cJf toolchain/$TOOLCHAIN_ARCHIVE /usr/local/genode-qt5 --absolute-names;
+          fi
+        - tool/ports/prepare_port qt5
+    cache:
+        key: ${CI_JOB_NAME}
+        paths:
+            - toolchain/$TOOLCHAIN_ARCHIVE
+            - contrib/*.tar.xz
+    artifacts:
+        paths:
+            - toolchain/$TOOLCHAIN_ARCHIVE
+            - contrib/*.tar.xz
+
+
+sdk-sculpt:
+    stage: sdk-sculpt
+    image: docker:stable
+    services:
+        - docker:dind
+    variables:
+        DOCKER_DRIVER: overlay2
+    before_script:
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    script:
+        - docker pull $SDK_BASE_CACHE || true
+        - docker build --cache-from $SDK_BASE_IMAGE
+                              --tag $SDK_SCULPT_IMAGE
+                              -f docker/sdk/Dockerfile .
+        - docker push $SDK_SCULPT_IMAGE
