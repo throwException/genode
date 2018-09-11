@@ -1,0 +1,191 @@
+stages:
+    - sdk-base
+    - prepare
+    - sdk-sculpt
+
+
+variables:
+    SDK_BASE_CACHE:   "$CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/sdk/base:cache"
+    SDK_BASE_IMAGE:   "$CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/sdk/base:pipeline-$CI_PIPELINE_IID"
+    SDK_SCULPT_IMAGE: "$CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/sdk/sculpt:pipeline-$CI_PIPELINE_IID"
+
+
+sdk-base:
+    stage: sdk-base
+    image: docker:stable
+    services:
+        - docker:dind
+    variables:
+        DOCKER_DRIVER: overlay2
+    before_script:
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    script:
+        - docker pull $SDK_BASE_CACHE || true
+        - docker build --cache-from $SDK_BASE_CACHE
+                              --tag $SDK_BASE_CACHE
+                              --tag $SDK_BASE_IMAGE
+                              --target base
+                              -f docker/sdk/Dockerfile .
+        - docker push $SDK_BASE_CACHE
+        - docker push $SDK_BASE_IMAGE
+
+
+.prepare_base:
+    stage: prepare
+    image: $SDK_BASE_IMAGE
+    script:
+        - ./tool/ports/prepare_port $PORTS -j8
+
+        # delete all port archives, except the current
+        - for port in $PORTS; do
+                current=$(basename $(tool/ports/current $port));
+                find contrib/ -mindepth 1 -maxdepth 1 -type f -regextype sed
+                              -regex ".*/$port-[a-f0-9]\{40\}\.tar.xz"
+                            ! -name "$current.tar.xz"
+                              -print -delete;
+          done
+
+        # list port archives
+        - ls -lh contrib/*.tar.xz
+
+    cache:
+        key: ${CI_JOB_NAME}
+        paths:
+            - contrib/*.tar.xz
+    artifacts:
+        paths:
+            - contrib/*.tar.xz
+
+
+base:
+    extends: .prepare_base
+    variables:
+        PORTS: "foc grub2 nova sel4 sel4_tools"
+
+
+dde:
+    extends: .prepare_base
+    variables:
+        PORTS: "dde_bsd dde_ipxe dde_linux dde_rump"
+
+
+libports:
+    extends: .prepare_base
+    variables:
+        PORTS: "acpica ada-runtime curl drm expat freetype gcov gmp jpeg libarchive libc \
+                libgcrypt libiconv libpng libssh lwip mesa ncurses openssl pcg-c \
+                pcre python qemu-usb qoost sanitizer solo5 stb stdcxx ttf-bitstream-vera \
+                x86emu xz zlib jitterentropy"
+
+
+ports:
+    extends: .prepare_base
+    variables:
+        PORTS: "bash coreutils e2fsprogs gnupg vim virtualbox5"
+
+
+qt5:
+    extends: .prepare_base
+    before_script:
+        - TOOLCHAIN_HASH="$(cat repos/libports/ports/qt5-host.hash)"
+        - TOOLCHAIN_ARCHIVE="$(echo genode-qt5-$TOOLCHAIN_HASH).tar.xz"
+        - QT5_HASH="$(cat repos/libports/ports/qt5.hash)"
+        - QT5_VERSION="19.08"
+        - mkdir -p toolchain
+    script:
+        - if ! tar xPf toolchain/$TOOLCHAIN_ARCHIVE; then
+              tool/tool_chain_qt5 build install MAKE_JOBS=4;
+              tar cJf toolchain/$TOOLCHAIN_ARCHIVE /usr/local/genode/qt5/$QT5_VERSION --absolute-names;
+          fi
+        - tool/ports/prepare_port qt5
+        - rm -fv contrib/qt5-host-$TOOLCHAIN_HASH/*.tar.*
+        - rm -fv contrib/qt5-$QT5_HASH/*.tar.*
+
+        # delete all toolchain archives, except the current
+        - find toolchain/ -mindepth 1 -maxdepth 1 -type f -regextype sed
+                          -regex ".*/genode-qt5-[a-f0-9]\{40\}\.tar\.xz"
+                        ! -name "genode-qt5-$TOOLCHAIN_HASH.tar.xz"
+                          -print -delete
+
+        # delete all port archives, except the current
+        - for port in "qt5-host" "qt5"; do
+                current=$(basename $(tool/ports/current $port));
+                find contrib/ -mindepth 1 -maxdepth 1 -type f -regextype sed
+                              -regex ".*/$port-[a-f0-9]\{40\}\.tar.xz"
+                            ! -name "$current.tar.xz"
+                              -print -delete;
+          done
+
+        # list toolchain and port archives
+        - ls -lh toolchain/$TOOLCHAIN_ARCHIVE
+        - ls -lh contrib/*.tar.xz
+
+    cache:
+        key: ${CI_JOB_NAME}
+        paths:
+            - toolchain/$TOOLCHAIN_ARCHIVE
+            - contrib/*.tar.xz
+    artifacts:
+        paths:
+            - toolchain/$TOOLCHAIN_ARCHIVE
+            - contrib/*.tar.xz
+
+
+.toolchain_base:
+    extends: .prepare_base
+    when: manual
+    before_script:
+        - apt-get install -qy --no-install-recommends
+                          file
+                          gnat-7
+                          gprbuild
+                          pkg-config
+                          libncurses-dev
+                          texinfo
+                          gpg
+                          libexpat1-dev
+        - TOOLCHAIN_ARCHIVE="genode-toolchain-$PLATFORM.tar.xz"
+        - mkdir -p toolchain
+    script:
+        - tool/ports/prepare_port binutils gcc
+        - ls -lh /usr/local/genode-gcc || true
+        - tool/tool_chain arm x86 install MAKE_JOBS=4
+        - ls -lh /usr/local/genode-gcc || true
+        - tar cJf toolchain/$TOOLCHAIN_ARCHIVE /usr/local/genode-gcc --absolute-names;
+    cache:
+        key: ${CI_JOB_NAME}
+        paths:
+            - contrib/*.tar.xz
+    artifacts:
+        paths:
+            - toolchain/$TOOLCHAIN_ARCHIVE
+            - contrib/*.tar.xz
+
+
+toolchain_arm:
+    extends: .toolchain_base
+    variables:
+        PLATFORM: arm
+
+
+toolchain_x86:
+    extends: .toolchain_base
+    variables:
+        PLATFORM: x86
+
+
+sdk-sculpt:
+    stage: sdk-sculpt
+    image: docker:stable
+    services:
+        - docker:dind
+    variables:
+        DOCKER_DRIVER: overlay2
+    before_script:
+        - docker login -u gitlab-ci-token -p $CI_JOB_TOKEN $CI_REGISTRY
+    script:
+        - docker pull $SDK_BASE_CACHE || true
+        - docker build --cache-from $SDK_BASE_IMAGE
+                              --tag $SDK_SCULPT_IMAGE
+                              -f docker/sdk/Dockerfile .
+        - docker push $SDK_SCULPT_IMAGE
