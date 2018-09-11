@@ -1,0 +1,40 @@
+#!/usr/bin/make -f
+
+#
+# \brief  Tool to determine the current recipe version
+# \author Roman Iten
+# \date   2018-09-11
+#
+
+define HELP_MESSAGE
+
+  Determine the current version of the recipes given by <archive-path>
+
+  usage:
+
+    $(firstword $(MAKEFILE_LIST)) <archive-path>...
+
+endef
+
+export GENODE_DIR := $(realpath $(dir $(MAKEFILE_LIST))/../..)
+
+include $(GENODE_DIR)/tool/depot/mk/front_end.inc
+
+
+.PHONY: current
+
+$(MAKECMDGOALS):
+
+_recipe_path = $(if $(call archive_has_type,$1,bin),src/$(call last_path_element,$1),$\
+                 $(call archive_type,$1)/$(call last_path_element,$1))
+
+_versioned_archive = $1/$(call recipe_version,$(call _recipe_path,$1))
+
+_versioned_archives = $(strip $(foreach A,$(MAKECMDGOALS),$(call _versioned_archive,$A)))
+
+current:
+	$(if $(_versioned_archives),$\
+       @$(ECHO) $(_versioned_archives))
+
+$(MAKECMDGOALS): current
+	@true
