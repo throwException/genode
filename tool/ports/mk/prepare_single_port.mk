@@ -22,7 +22,11 @@ endif
 #
 # Default rule that triggers the actual preparation steps
 #
-$(TARGET): _check_integrity
+$(TARGET): _check_integrity _create_archive
+
+_create_archive : _install_in_port_dir
+	$(VERBOSE)(test -f "$(PORT_DIR).tar.xz" || tar cJf "$(PORT_DIR).tar.xz" -C $(CONTRIB_DIR) $(notdir $(PORT_DIR)))
+#	$(VERBOSE)tar cJf "$(PORT_DIR).tar.xz" -C $(CONTRIB_DIR) $(notdir $(PORT_DIR))
 
 _check_integrity : _install_in_port_dir
 ifneq ($(CHECK_HASH),no)
@@ -34,7 +38,8 @@ endif
 # During the preparatio steps, the port directory is renamed. We use the suffix
 # ".incomplete" to mark this transient state of the port directory.
 #
-_install_in_port_dir: $(PORT_DIR)
+_install_in_port_dir: $(PORT_DIR) _extract_archive
+ifeq ("$(wildcard $(PORT_DIR).tar.xz)","")
 	@#\
 	 # if the transient directory already exists, reuse it as it may contain\
 	 # finished steps such as downloads. By reusing it, we avoid downloading\
@@ -57,6 +62,10 @@ _install_in_port_dir: $(PORT_DIR)
 	 # directory to the real one.\
 	 #
 	$(VERBOSE)mv $(PORT_DIR).incomplete $(PORT_DIR)
+endif
+
+_extract_archive:
+	$(VERBOSE)(test -f "$(PORT_DIR).tar.xz" && tar xf "$(PORT_DIR).tar.xz" -C $(CONTRIB_DIR)) || true
 
 $(PORT_DIR):
 	$(VERBOSE)mkdir -p $@
