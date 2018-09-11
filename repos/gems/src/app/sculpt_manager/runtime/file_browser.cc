@@ -151,6 +151,7 @@ void Sculpt::gen_noux_start(Xml_generator &xml, Rom_name const &name,
 						xml.attribute("name", "vimrc"); }); }); });
 
 			gen_named_node(xml, "rom", "VERSION");
+			gen_named_node(xml, "rom", "FIRMWARE_INFO");
 		});
 
 		gen_named_node(xml, "start", "/bin/bash", [&] () {
@@ -187,6 +188,7 @@ void Sculpt::gen_noux_start(Xml_generator &xml, Rom_name const &name,
 		gen_parent_rom_route(xml, "depot_users.tar");
 		gen_parent_rom_route(xml, "vimrc", "config -> vimrc");
 		gen_parent_rom_route(xml, "VERSION");
+		gen_parent_rom_route(xml, "FIRMWARE_INFO");
 		gen_parent_route<Cpu_session>    (xml);
 		gen_parent_route<Pd_session>     (xml);
 		gen_parent_route<Log_session>    (xml);
