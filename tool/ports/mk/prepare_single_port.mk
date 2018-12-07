@@ -22,7 +22,7 @@ endif
 #
 # Default rule that triggers the actual preparation steps
 #
-$(TARGET): _check_integrity _create_archive
+$(TARGET): _check_integrity _remove_downolads _create_archive
 
 _create_archive : _install_in_port_dir
 	$(VERBOSE)(test -f "$(PORT_DIR).tar.xz" || tar cJf "$(PORT_DIR).tar.xz" -C $(CONTRIB_DIR) $(notdir $(PORT_DIR)))
@@ -66,6 +66,10 @@ endif
 
 _extract_archive:
 	$(VERBOSE)(test -f "$(PORT_DIR).tar.xz" && tar xf "$(PORT_DIR).tar.xz" -C $(CONTRIB_DIR)) || true
+
+_remove_downolads:
+	$(VERBOSE)(rm -f "$(PORT_DIR)"/*.tar.xz)
+	$(VERBOSE)(rm -f "$(PORT_DIR)"/*.tar.gz)
 
 $(PORT_DIR):
 	$(VERBOSE)mkdir -p $@
