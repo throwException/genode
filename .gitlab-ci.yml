@@ -70,6 +70,7 @@ qt5:
     before_script:
         - TOOLCHAIN_HASH="$(cat repos/libports/ports/qt5-host.hash)"
         - TOOLCHAIN_ARCHIVE="$(echo genode-qt5-$TOOLCHAIN_HASH).tar.xz"
+        - QT5_HASH="$(cat repos/libports/ports/qt5.hash)"
         - mkdir -p toolchain
     script:
         - if ! tar xPf toolchain/$TOOLCHAIN_ARCHIVE; then
@@ -77,6 +78,8 @@ qt5:
               tar cJf toolchain/$TOOLCHAIN_ARCHIVE /usr/local/genode-qt5 --absolute-names;
           fi
         - tool/ports/prepare_port qt5
+        - rm -f contrib/qt5-host-$TOOLCHAIN_HASH/*.tar.xz
+        - rm -f contrib/qt5-$QT5_HASH/*.tar.xz
     cache:
         key: ${CI_JOB_NAME}
         paths:
