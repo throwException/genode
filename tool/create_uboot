@@ -20,12 +20,13 @@ help:
 	$(ECHO) "  <platform>   can be:"
 	$(ECHO) "                  'wand_quad'"
 	$(ECHO) "                  'usb_armory'"
+	$(ECHO) "                  'apalis_imx6'"
 	$(ECHO)
 	$(ECHO) "  The image will be located at:"
 	$(ECHO) "  $(UBOOT_BUILD_DIR)<platform>/$(shell basename $(MMC_IMG))"
 	$(ECHO)
 
-PLATFORMS_ARM := wand_quad usb_armory
+PLATFORMS_ARM := wand_quad usb_armory apalis_imx6
 PLATFORMS     := $(PLATFORMS_ARM)
 
 # get targeted platform based on the make target
@@ -34,11 +35,19 @@ PLATFORM := $(firstword $(filter $(PLATFORMS),$(MAKECMDGOALS)))
 # get Genode base directory based on the known location of this tool
 GENODE_DIR := $(realpath $(dir $(firstword $(MAKEFILE_LIST)))/..)
 
+ifeq ($(PLATFORM),apalis_imx6)
+#UBOOT_URL           := git://git.toradex.com/u-boot-toradex.git
+#UBOOT_BRANCH        := 2016.11-toradex
+UBOOT_URL           := ~/Documents/Toradex/u-boot-toradex
+UBOOT_BRANCH        := test_apalis
+UBOOT_BRANCH_TAG    := $(UBOOT_DIR)/$(UBOOT_BRANCH)
+else
 UBOOT_URL           := https://github.com/m-stein/uboot
-UBOOT_DIR           := $(GENODE_DIR)/contrib/uboot
-UBOOT_TAG           := $(UBOOT_DIR)/.gitignore
 UBOOT_BRANCH        := genode_$(PLATFORM)
 UBOOT_BRANCH_TAG    := $(UBOOT_DIR)/$(UBOOT_BRANCH)
+endif
+UBOOT_TAG           := $(UBOOT_DIR)/.gitignore
+UBOOT_DIR           := $(GENODE_DIR)/contrib/uboot
 UBOOT_BUILD_ROOT    := $(UBOOT_DIR)/build
 UBOOT_BUILD_DIR     := $(UBOOT_BUILD_ROOT)/$(PLATFORM)
 UBOOT_BUILD_CONF    := $(UBOOT_BUILD_DIR)/.config
@@ -71,7 +80,17 @@ ifeq ($(PLATFORM), wand_quad)
 UBOOT_IMG     := $(UBOOT_BUILD_DIR)/u-boot.img
 UBOOT_IMG_SPL := $(UBOOT_BUILD_DIR)/SPL
 UBOOT_IMGS    := $(UBOOT_IMG) $(UBOOT_IMG_SPL)
-UBOOT_CONF    := wandboard_config
+UBOOT_CONF    := wandboard_defconfig
+FINISH_IMAGE  := \
+	dd if=$(UBOOT_IMG_SPL) of=$(MMC_IMG) bs=1k seek=0  conv=notrunc,fsync; \
+	dd if=$(UBOOT_IMG)     of=$(MMC_IMG) bs=1k seek=68 conv=notrunc,fsync;
+endif
+
+ifeq ($(PLATFORM), apalis_imx6)
+UBOOT_IMG     := $(UBOOT_BUILD_DIR)/u-boot.img
+UBOOT_IMG_SPL := $(UBOOT_BUILD_DIR)/SPL
+UBOOT_IMGS    := $(UBOOT_IMG) $(UBOOT_IMG_SPL)
+UBOOT_CONF    := apalis_imx6_defconfig
 FINISH_IMAGE  := \
 	dd if=$(UBOOT_IMG_SPL) of=$(MMC_IMG) bs=1k seek=0  conv=notrunc,fsync; \
 	dd if=$(UBOOT_IMG)     of=$(MMC_IMG) bs=1k seek=68 conv=notrunc,fsync;
