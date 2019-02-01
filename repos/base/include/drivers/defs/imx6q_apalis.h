@@ -26,7 +26,7 @@ namespace Imx6q_apalis {
 	enum {
 		/* normal RAM */
 		RAM_BASE = 0x10000000,
-		RAM_SIZE = 0x80000000,
+		RAM_SIZE = 0x40000000,
 	};
 };
 
