@@ -12,6 +12,7 @@
  */
 
 /* Core includes */
+#include <kernel/cpu.h>
 #include <kernel/timer.h>
 #include <kernel/configuration.h>
 #include <hw/assert.h>
@@ -131,7 +132,11 @@ void Timer::process_timeouts()
 }
 
 
-Timer::Timer(unsigned cpu_id) : _cpu_id(cpu_id), _driver(cpu_id)
+void Timer::occurred() { _cpu.scheduler().timeout(); }
+
+
+Timer::Timer(Cpu & cpu)
+: Irq(interrupt_id(), cpu.irq_pool()), _cpu(cpu), _driver(cpu.id())
 {
 	/*
 	 * The timer frequency should allow a good accuracy on the smallest
