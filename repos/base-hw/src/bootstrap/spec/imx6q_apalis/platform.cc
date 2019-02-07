@@ -77,9 +77,12 @@ Bootstrap::Platform::Board::Board()
 		{ 0x20e0230, 0x11 },
 		{ 0x20e02b8, 0x0 },
 		{ 0x20e02f4, 0x0 },
-		{ 0x20e033c, 0x2 },
-		{ 0x20e0344, 0x3 },
-		{ 0x20e0348, 0x2 },
+		{ 0x20e033c, 0x0 }, // IOMUXC_SW_MUX_CTL_PAD_SD1_DATA1
+		{ 0x20e0340, 0x0 }, // IOMUXC_SW_MUX_CTL_PAD_SD1_DATA0
+		{ 0x20e0344, 0x0 }, // IOMUXC_SW_MUX_CTL_PAD_SD1_DATA3
+		{ 0x20e0348, 0x0 }, // IOMUXC_SW_MUX_CTL_PAD_SD1_CMD
+		{ 0x20e034c, 0x0 }, // IOMUXC_SW_MUX_CTL_PAD_SD1_DATA2
+		{ 0x20e0350, 0x0 }, // IOMUXC_SW_MUX_CTL_PAD_SD1_CLK
 		{ 0x20e035c, 0x3 },
 		{ 0x20e0360, 0x130b0 },
 		{ 0x20e0364, 0x110b0 },
