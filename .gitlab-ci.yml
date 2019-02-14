@@ -50,7 +50,7 @@ base:
 
 dde:
     variables:
-        PORTS: "dde_ipxe dde_linux dde_rump"
+        PORTS: "dde_bsd dde_ipxe dde_linux dde_rump"
     <<: *prepare_definition
 
 libports:
