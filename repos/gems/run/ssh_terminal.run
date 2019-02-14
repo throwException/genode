@@ -2,7 +2,7 @@
 # \brief  Test for the SSH terminal
 #
 
-assert_spec x86
+# assert_spec x86
 
 if {[have_spec linux]} {
 	puts "Run script is not supported on this platform."
@@ -24,6 +24,11 @@ set build_components {
 	test/terminal_echo
 	noux
 	noux-pkg/bash
+	server/report_rom
+}
+
+proc src_ip { } {
+		return "192.168.2.221"
 }
 
 source ${genode_dir}/repos/base/run/platform_drv.inc
@@ -37,7 +42,7 @@ create_boot_directory
 # Generate config
 #
 
-set config {
+append config {
 <config verbose="no">
 	<parent-provides>
 		<service name="ROM"/>
@@ -53,7 +58,11 @@ set config {
 	<default-route>
 		<any-service> <parent/> <any-child/> </any-service>
 	</default-route>
-	<default caps="100"/>
+	<default caps="100"/>}
+
+	append_platform_drv_config
+
+append config {
 	<start name="timer">
 		<resource name="RAM" quantum="1M"/>
 		<provides> <service name="Timer"/> </provides>
@@ -63,10 +72,14 @@ set config {
 		<provides> <service name="Report"/> <service name="ROM"/> </provides>
 		<config verbose="yes"/>
 	</start>
-	<start name="nic_drv">
-		<resource name="RAM" quantum="4M"/>
-		<provides> <service name="Nic"/> </provides>
+
+	<start name="nic_drv" caps="150">
+		<binary name="} [nic_drv_binary] {"/>
+		<resource name="RAM" quantum="20M"/>
+		<provides><service name="Nic"/></provides>
+		} [nic_drv_config] {
 	</start>
+
 	<start name="rtc_drv">
 		<resource name="RAM" quantum="1M"/>
 		<provides> <service name="Rtc"/> </provides>
@@ -97,6 +110,7 @@ set config {
 			</libc>
 		</config>
 		<route>
+			<service name="Nic"> <child name="nic_drv"/> </service>
 			<service name="Report"> <child name="report_rom"/> </service>
 			<any-service> <parent/> <any-child/> </any-service>
 		</route>
@@ -138,9 +152,10 @@ if {![file exists bin/ed25519_key]} {
 #
 
 # generic modules
-set boot_modules {
-	core ld.lib.so init timer nic_drv rtc_drv report_rom
+append boot_modules {
+	core ld.lib.so init timer rtc_drv report_rom
 	noux test-terminal_echo
+	} [nic_drv_binary] {
 
 	libc.lib.so libm.lib.so vfs.lib.so
 	vfs_lxip.lib.so lxip.lib.so libc_pipe.lib.so libc_noux.lib.so
