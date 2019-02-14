@@ -106,7 +106,7 @@ class Kernel::Timer : public Kernel::Irq
 
 		time_t time() const { return _time; }
 
-		void occurred();
+		void occurred() override;
 };
 
 #endif /* _CORE__KERNEL__TIMER_H_ */
