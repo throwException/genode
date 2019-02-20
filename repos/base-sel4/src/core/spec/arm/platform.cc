@@ -73,7 +73,7 @@ void Genode::Platform::_init_core_page_table_registry()
 	}
 	
 	/* reserve some memory for page directory construction - must be 16k on ARM */
-	enum { MAX_PROCESS_COUNT = 32 };
+	enum { MAX_PROCESS_COUNT = 128 };
 	addr_t const max_pd_mem = MAX_PROCESS_COUNT * (1UL << Page_directory_kobj::SIZE_LOG2);
 
 	_initial_untyped_pool.turn_into_untyped_object(Core_cspace::TOP_CNODE_UNTYPED_16K,
