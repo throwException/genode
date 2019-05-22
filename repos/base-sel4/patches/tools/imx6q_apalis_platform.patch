@@ -1,0 +1,11 @@
+--- src/tool/sel4_tools/elfloader-tool/include/plat/imx6/platform.h
++++ src/tool/sel4_tools/elfloader-tool/include/plat/imx6/platform.h
+@@ -30,6 +30,8 @@
+ #define UART_PPTR          IMX6_UART2_PADDR
+ #elif CONFIG_PLAT_WANDQ
+ #define UART_PPTR          IMX6_UART1_PADDR
++#elif CONFIG_PLAT_APALIS
++#define UART_PPTR          IMX6_UART1_PADDR
+ #else
+ #error "unknown imx6 platform selected!"
+ #endif

@@ -1,0 +1,23 @@
+--- src/kernel/sel4/include/plat/imx6/plat/machine/devices.h
++++ src/kernel/sel4/include/plat/imx6/plat/machine/devices.h
+@@ -16,6 +16,8 @@
+ #define UART_PADDR                  UART2_PADDR
+ #elif defined(CONFIG_PLAT_WANDQ)
+ #define UART_PADDR                  UART1_PADDR
++#elif defined(CONFIG_PLAT_APALIS)
++#define UART_PADDR                  UART1_PADDR
+ #else
+ #error "unknown imx6 platform selected!"
+ #endif
+--- src/kernel/sel4/include/plat/imx6/plat/machine/hardware.h
++++ src/kernel/sel4/include/plat/imx6/plat/machine/hardware.h
+@@ -58,6 +58,9 @@ static const p_region_t BOOT_RODATA avail_p_regs[] = {
+ #elif defined(CONFIG_PLAT_WANDQ)
+     /* Wandboard Quad: 2 GiB */
+     { /* .start = */ 0x10000000, /* .end = */ 0x90000000 }
++#elif defined(CONFIG_PLAT_APALIS)
++    /* Wandboard Quad: 2 GiB */
++    { /* .start = */ 0x10000000, /* .end = */ 0x50000000 }
+ #endif
+ };
+ 

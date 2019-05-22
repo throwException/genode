@@ -17,6 +17,8 @@ PATCHES   := $(sort $(wildcard $(REP_DIR)/patches/*.patch))
 
 HASH_INPUT += $(REP_DIR)/patches/imx6q_sabrelite.config
 HASH_INPUT += $(REP_DIR)/patches/imx7d_sabre.config
+HASH_INPUT += $(REP_DIR)/patches/imx6q_apalis.config
+HASH_INPUT += $(REP_DIR)/patches/imx6q_apalis_platform.patch
 
 # adjust kernel config usable on qemu and on native hw, and add a 32bit version
 default: $(DOWNLOADS)
@@ -26,8 +28,11 @@ default: $(DOWNLOADS)
 	$(VERBOSE)mv src/kernel/sel4/configs/pc99/autoconf.h src/kernel/sel4/configs/pc99/ia32/autoconf.h
 	$(VERBOSE)sed -i "s.^ \*/. \*/\n#ifndef ARCH_IA32\n#define ARCH_IA32\n#endif\n." src/kernel/sel4/configs/pc99/ia32/autoconf.h
 	$(VERBOSE)mkdir -p src/kernel/sel4/configs/imx6/imx6q_sabrelite
-	$(VERBOSE)mv src/kernel/sel4/configs/imx6/autoconf.h src/kernel/sel4/configs/imx6/imx6q_sabrelite/autoconf.h
+	$(VERBOSE)cp src/kernel/sel4/configs/imx6/autoconf.h src/kernel/sel4/configs/imx6/imx6q_sabrelite/autoconf.h
 	$(VERBOSE)patch -p0 <$(REP_DIR)/patches/imx6q_sabrelite.config
 	$(VERBOSE)mkdir -p src/kernel/sel4/configs/imx7/imx7d_sabre
 	$(VERBOSE)mv src/kernel/sel4/configs/imx7/autoconf.h src/kernel/sel4/configs/imx7/imx7d_sabre/autoconf.h
 	$(VERBOSE)patch -p0 <$(REP_DIR)/patches/imx7d_sabre.config
+	$(VERBOSE)mkdir -p src/kernel/sel4/configs/imx6/imx6q_apalis
+	$(VERBOSE)cp src/kernel/sel4/configs/imx6/autoconf.h src/kernel/sel4/configs/imx6/imx6q_apalis/autoconf.h
+	$(VERBOSE)patch -p0 <$(REP_DIR)/patches/imx6q_apalis.config

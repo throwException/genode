@@ -7,4 +7,8 @@ URL(sel4_tools) := https://github.com/skalk/seL4_tools.git
 REV(sel4_tools) := 3839bb9740f8f13266de4273774004634388a2f7
 DIR(sel4_tools) := src/tool/sel4_tools
 
+PATCHES   := $(sort $(wildcard $(REP_DIR)/patches/tools/*.patch))
+
+HASH_INPUT += $(REP_DIR)/patches/tools/imx6q_apalis_platform.patch
+
 $(call check_tool,python)
