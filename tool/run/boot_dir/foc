@@ -18,6 +18,7 @@ proc core_link_address { } {
 	if {[have_spec odroid_x2]} { return "0x80100000" }
 	if {[have_spec imx53    ]} { return "0x70140000" }
 	if {[have_spec imx6q_sabrelite ]} { return "0x14000000" }
+	if {[have_spec imx6q_apalis ]}    { return "0x14000000" }
 	if {[have_spec imx7d_sabre ]}     { return "0x91000000" }
 
 	puts stderr "Error: platform not supported, core link address unknown"
@@ -229,6 +230,7 @@ proc base_src { } {
 	if {[have_spec arndale]} { return base-foc-arndale }
 	if {[have_spec rpi3]}    { return base-foc-rpi3 }
 	if {[have_spec imx6q_sabrelite]} { return base-foc-imx6q_sabrelite }
+	if {[have_spec imx6q_apalis]}    { return base-foc-imx6q_apalis }
 	if {[have_spec imx7d_sabre]}     { return base-foc-imx7d_sabre }
 
 	global specs
