@@ -1,0 +1,17 @@
+<runtime ram="4M" caps="200" binary="fec_nic_drv">
+
+	<requires>
+		<io_mem/>
+		<irq/>
+		<platform/>
+	</requires>
+	<provides> <nic/> </provides>
+
+	<content>
+		<rom label="ld.lib.so"/>
+		<rom label="fec_nic_drv"/>
+	</content>
+
+	<config/>
+
+</runtime>
