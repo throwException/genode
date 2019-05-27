@@ -1,4 +1,4 @@
-<runtime ram="64M" caps="2000" binary="init">
+<runtime ram="68M" caps="2000" binary="init">
 
 	<requires>
 		<rom label="installation"/>
@@ -63,6 +63,7 @@
 			<config>
 				<policy label="init_config"	       report="init_config"/>
 				<policy label="dependencies"	     report="dependencies"/>
+				<policy label="index"	             report="index"/>
 				<policy label="user"               report="user"/>
 				<policy label="init_state"	       report="init_state"/>
 				<policy label="verified"	         report="verified"/>
@@ -119,6 +120,7 @@
 				<service name="Report" label="state">          <parent label="state"/> </service>
 				<service name="Report" label="init_config">    <child name="report_rom" label="init_config"/> </service>
 				<service name="ROM" label="dependencies">      <child name="report_rom" label="dependencies"/> </service>
+				<service name="ROM" label="index">             <child name="report_rom" label="index"/> </service>
 				<service name="ROM" label="user">              <child name="report_rom" label="user"/> </service>
 				<service name="ROM" label="init_state">        <child name="report_rom" label="init_state"/> </service>
 				<service name="ROM" label="verified">          <child name="report_rom" label="verified"/> </service>
@@ -134,6 +136,7 @@
 			<route>
 				<service name="ROM" label="config">                         <child name="report_rom" label="init_config"/> </service>
 				<service name="Report" label="depot_query -> dependencies"> <child name="report_rom" label="dependencies"/> </service>
+				<service name="Report" label="depot_query -> index">        <child name="report_rom" label="index"/> </service>
 				<service name="Report" label="depot_query -> user">         <child name="report_rom" label="user"/> </service>
 				<service name="Report" label="state">                       <child name="report_rom" label="init_state"/> </service>
 				<service name="Report" label="verify -> result">            <child name="report_rom" label="verified"/> </service>
