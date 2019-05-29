@@ -1,0 +1,90 @@
+build {
+	core init timer
+	app/sequence
+	lib/libc_noux
+	noux
+	noux-pkg/coreutils
+	server/vfs
+}
+
+create_boot_directory
+
+install_config {
+	<config verbose="yes">
+		<parent-provides>
+			<service name="ROM"/>
+			<service name="LOG"/>
+			<service name="RM"/>
+			<service name="CPU"/>
+			<service name="PD"/>
+			<service name="IRQ"/>
+			<service name="IO_MEM"/>
+			<service name="IO_PORT"/>
+		</parent-provides>
+		<default-route>
+			<any-service> <any-child/> <parent/> </any-service>
+		</default-route>
+		<default caps="256"/>
+		<start name="timer">
+			<resource name="RAM" quantum="1M"/>
+			<provides><service name="Timer"/></provides>
+		</start>
+		<start name="vfs">
+			<resource name="RAM" quantum="2M"/>
+			<provides><service name="File_system"/></provides>
+			<config>
+				<vfs>
+					<inline name="f1">f1</inline>
+					<dir name="l1">
+						<inline name="f2">f2</inline>
+						<dir name="l2">
+							<inline name="f3"></inline>
+							<inline name="f4"/>
+						</dir>
+					</dir>
+				</vfs>
+				<default-policy root="/"/>
+			</config>
+		</start>
+		<start name="noux">
+			<resource name="RAM" quantum="16M"/>
+			<config verbose="yes" stdin="/null" stdout="/log" stderr="/log">
+				<fstab>
+					<null/>
+					<log/>
+					<tar name="coreutils.tar"/>
+					<dir name="fs">
+					  <fs/>
+					</dir>
+				</fstab>
+				<start name="/bin/cat">
+					<arg value="/fs/l1/l2/f4"/>
+				</start>
+				<!--
+				<start name="/bin/ls">
+					<arg value="-lah"/>
+					<arg value="/fs/l1/l2"/>
+				</start>
+				-->
+			</config>
+		</start>
+	</config>
+}
+
+build_boot_image {
+	core init ld.lib.so
+	coreutils.tar
+	libc_noux.lib.so
+	libm.lib.so
+	noux libc.lib.so vfs.lib.so
+	posix.lib.so
+	sequence
+	timer
+	vfs
+}
+
+append qemu_args " -nographic -serial mon:stdio "
+
+# coreutils.tar is really huge when built for x86_64
+
+run_genode_until forever
