@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -qy --no-install-recommends \
   bison \
   bzip2 \
   ca-certificates \
+  ccache \
   cpio \
   cpp \
   curl \
