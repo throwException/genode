@@ -33,6 +33,7 @@ RUN apt-get update && apt-get install -qy --no-install-recommends \
   libxml2-utils \
   make \
   mtools \
+  net-tools \
   openssh-client \
   parted \
   patch \
@@ -55,6 +56,7 @@ RUN apt-get update && apt-get install -qy --no-install-recommends \
   tzdata \
   u-boot-tools \
   udev \
+  uml-utilities \
   unzip \
   wget \
   xorriso \
