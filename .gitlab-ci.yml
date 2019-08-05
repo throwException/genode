@@ -84,6 +84,14 @@ ports:
         PORTS: "bash coreutils e2fsprogs gnupg vim virtualbox5"
 
 
+world-ports:
+    extends: .prepare_base
+    before_script:
+        - git clone https://github.com/genodelabs/genode-world.git repos/world
+    variables:
+        PORTS: "jdk jdk_generated"
+
+
 qt5:
     extends: .prepare_base
     before_script:
