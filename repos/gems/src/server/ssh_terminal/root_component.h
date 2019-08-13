@@ -78,7 +78,7 @@ class Terminal::Root_component : public Genode::Root_component<Session_component
 				if (!login) { throw -1; }
 
 				Session_component *s = nullptr;
-					s = new (md_alloc()) Session_component(_env, 4096, login->user);
+					s = new (md_alloc()) Session_component(_env, 4096u, login->user);
 
 				try {
 					Libc::with_libc([&] () { _server.attach_terminal(*s); });
