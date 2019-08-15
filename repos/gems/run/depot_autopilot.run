@@ -631,6 +631,7 @@ proc exit {{status 0}} {
 if {[expr ![have_spec x86] && \
           ![have_spec arm_v6] && \
           ![have_spec arm_v7a] && \
+          ![have_spec armhf_v7a] && \
           ![have_spec arm_v8a]] || \
     [expr [have_spec foc] && [have_spec panda]]} \
 {
