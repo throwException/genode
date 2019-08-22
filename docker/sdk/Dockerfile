@@ -37,6 +37,7 @@ RUN apt-get update && apt-get install -qy --no-install-recommends \
   openssh-client \
   parted \
   patch \
+  picocom \
   python \
   python-future \
   python-pip \
