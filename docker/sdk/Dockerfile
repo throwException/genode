@@ -29,6 +29,7 @@ RUN apt-get update && apt-get install -qy --no-install-recommends \
   iasl \
   kmod \
   libc6-dev \
+  libc6-dev-armel-cross \
   libc6-dev-i386 \
   libxml2-utils \
   make \
