@@ -1,6 +1,7 @@
 /*
  * \brief  Linux system-call bindings
  * \author Norman Feske
+ * \author Stefan Thöni
  * \date   2008-10-22
  *
  * This file is meant to be internally used by the framework. It is not public
@@ -20,6 +21,7 @@
 
 /*
  * Copyright (C) 2008-2017 Genode Labs GmbH
+ * Copyright (C) 2019 gapfruit AG
  *
  * This file is part of the Genode OS framework, which is distributed
  * under the terms of the GNU Affero General Public License version 3.
@@ -36,6 +38,7 @@
 #include <util/string.h>
 #include <base/snprintf.h>
 #include <base/log.h>
+#include <sys/poll.h>
 
 /*
  * Resolve ambiguity between 'Genode::size_t' and the host's header's 'size_t'.
@@ -144,6 +147,12 @@ inline int lx_getpeername(int sockfd, struct sockaddr *name, socklen_t *namelen)
 	return lx_socketcall(SYS_GETPEERNAME, args);
 }
 
+inline int lx_getsockname(int sockfd, struct sockaddr *name, socklen_t *namelen)
+{
+	long args[3] = { sockfd, (long)name, (long)namelen };
+	return lx_socketcall(SYS_GETSOCKNAME, args);
+}
+
 #else
 
 inline int lx_socketpair(int domain, int type, int protocol, int sd[2])
@@ -169,9 +178,20 @@ inline int lx_getpeername(int sockfd, struct sockaddr *name, socklen_t *namelen)
 	return lx_syscall(SYS_getpeername, sockfd, name, namelen);
 }
 
+inline int lx_getsockname(int sockfd, struct sockaddr *name, socklen_t *namelen)
+{
+	return lx_syscall(SYS_getsockname, sockfd, name, namelen);
+}
+
 /* TODO add missing socket system calls */
 
 #endif /* SYS_socketcall */
+
+
+inline int lx_poll(pollfd* fds, nfds_t nfds, int timeout)
+{
+	return lx_syscall(SYS_poll, fds, nfds, timeout);
+}
 
 
 /*******************************************
@@ -435,5 +455,16 @@ inline bool lx_sigsetmask(int signum, bool state)
 	return old_sigmask.is_set(signum);
 }
 
+
+inline int lx_prctl(int option, unsigned long arg2, unsigned long arg3,
+                                unsigned long arg4, unsigned long arg5)
+{
+	return lx_syscall(SYS_prctl, option, arg2, arg3, arg4, arg5);
+}
+
+inline int lx_seccomp(int option, int flag, void* program)
+{
+	return lx_syscall(SYS_seccomp, option, flag, program);
+}
 
 #endif /* _LIB__SYSCALL__LINUX_SYSCALLS_H_ */

@@ -1,11 +1,13 @@
 /*
  * \brief  Default version of platform-specific part of RPC framework
  * \author Norman Feske
+ * \author Stefan Thoeni
  * \date   2006-05-12
  */
 
 /*
  * Copyright (C) 2006-2017 Genode Labs GmbH
+ * Copyright (C) 2019 gapfruit AG
  *
  * This file is part of the Genode OS framework, which is distributed
  * under the terms of the GNU Affero General Public License version 3.
@@ -17,6 +19,7 @@
 
 /* base-internal includes */
 #include <base/internal/ipc_server.h>
+#include <base/internal/fdset.h>
 
 using namespace Genode;
 
@@ -38,6 +41,9 @@ Untyped_capability Rpc_entrypoint::_manage(Rpc_object_base *obj)
 	/* add server object to object pool */
 	obj->cap(new_obj_cap);
 	insert(obj);
+
+	Fd_set* set = (Fd_set*)native_data();
+	set->write_cancel();
 
 	/* return capability that uses the object id as badge */
 	return new_obj_cap;

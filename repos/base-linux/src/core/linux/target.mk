@@ -21,7 +21,6 @@ SRC_CC        = main.cc \
                 capability_space.cc \
                 rpc_cap_factory_l4.cc \
                 ram_dataspace_factory.cc \
-                core_rpc_cap_alloc.cc \
                 io_mem_session_component.cc \
                 signal_source_component.cc \
                 signal_transmitter_proxy.cc \
@@ -34,6 +33,7 @@ SRC_CC        = main.cc \
                 default_log.cc \
                 env_reinit.cc \
                 heartbeat.cc \
+                rpc_cap_alloc.cc \
                 thread.cc thread_myself.cc
 
 INC_DIR      += $(REP_DIR)/src/core/include \
@@ -64,11 +64,11 @@ vpath signal_source_component.cc  $(GEN_CORE_DIR)
 vpath signal_transmitter_proxy.cc $(GEN_CORE_DIR)
 vpath signal_receiver.cc          $(GEN_CORE_DIR)
 vpath trace_session_component.cc  $(GEN_CORE_DIR)
-vpath core_rpc_cap_alloc.cc       $(GEN_CORE_DIR)
 vpath default_log.cc              $(GEN_CORE_DIR)
 vpath heartbeat.cc                $(GEN_CORE_DIR)
 vpath thread.cc                   $(BASE_DIR)/src/lib/base
 vpath thread_myself.cc            $(BASE_DIR)/src/lib/base
 vpath trace.cc                    $(BASE_DIR)/src/lib/base
 vpath env_reinit.cc               $(REP_DIR)/src/lib/base
+vpath rpc_cap_alloc.cc            $(REP_DIR)/src/lib/base
 vpath %.cc                        $(REP_DIR)/src/core

@@ -344,6 +344,7 @@ class Genode::Rpc_entrypoint : Thread, public Object_pool<Rpc_object_base>
 		Pd_session       &_pd_session;        /* for creating capabilities             */
 		Exit_handler      _exit_handler { };
 		Capability<Exit>  _exit_cap     { };
+		uint8_t           _native_data[32768+16]; /* used in base-linux to store polled file/socket descriptors */
 
 		/**
 		 * Access to kernel-specific part of the PD session interface
@@ -416,6 +417,8 @@ class Genode::Rpc_entrypoint : Thread, public Object_pool<Rpc_object_base>
 		               Affinity::Location location = Affinity::Location());
 
 		~Rpc_entrypoint();
+
+		uint8_t* native_data() { return _native_data; }
 
 		/**
 		 * Associate RPC object with the entry point
