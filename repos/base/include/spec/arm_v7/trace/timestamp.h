@@ -24,8 +24,8 @@ namespace Genode { namespace Trace {
 
 	inline Timestamp timestamp()
 	{
-		uint32_t t;
-		asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(t));
+		static uint32_t t=0;
+		//asm volatile("mrc p15, 0, %0, c9, c13, 0" : "=r"(t));
 		return t;
 	}
 } }
