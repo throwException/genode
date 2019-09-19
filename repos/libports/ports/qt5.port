@@ -621,3 +621,4 @@ qtwebkit_generated: $(CURDIR)/src/lib/qt5/qtwebkit/Source/ThirdParty/ANGLE/gener
                     $(CURDIR)/src/lib/qt5/qtwebkit/Source/WebCore/generated/generated.tag
 
 default: qt5_headers qtbase_generated qtdeclarative_generated qtwebkit_generated
+	$(VERBOSE)rm -rf $(CURDIR)/src/lib/qt5/qt5/qtwebengine
