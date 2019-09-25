@@ -52,6 +52,7 @@ RUN apt-get update && apt-get install -qy --no-install-recommends \
   qemu-system-x86 \
   qt5-default \
   qtchooser \
+  sshpass \
   subversion \
   sudo \
   tcl \
