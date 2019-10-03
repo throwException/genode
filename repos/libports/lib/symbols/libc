@@ -1057,3 +1057,5 @@ _ZN4Libc6PluginD1Ev T
 _ZN4Libc6PluginD2Ev T
 _ZN4Libc9mem_allocEv T
 _ZTIN4Libc6PluginE D 40
+
+__inet_net_pton W
