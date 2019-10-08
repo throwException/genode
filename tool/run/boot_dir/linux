@@ -30,6 +30,9 @@ proc run_boot_dir {binaries} {
 
 	# Save config part of the image.elf for easy inspection
 	exec cp -f [run_dir]/genode/config [run_dir].config
+
+	# Create an image file (in case an image module is included)
+	run_image
 }
 
 

@@ -1,0 +1,33 @@
+##
+# Create a TAR achive
+#
+# \param --image-tar-compression  compression method to use [none|gz|bz2]
+#
+
+
+proc image_tar_compression { } { return [get_cmd_arg --image-tar-compression "none"] }
+
+
+##
+# Create archive
+#
+proc run_image { {unused ""} } {
+
+	set compression [image_tar_compression]
+
+	switch $compression {
+		none {
+			eval "exec tar -C [run_dir]/genode -chf [run_dir]/genode.tar ."
+		}
+		gz {
+			eval "exec tar -C [run_dir]/genode -chzf [run_dir]/genode.tar.gz ."
+		}
+		xz {
+			eval "exec tar -C [run_dir]/genode -chJf [run_dir]/genode.tar.xz ."
+		}
+		default {
+			puts "Unsupported compression method $compression"
+			exit 1
+		}
+	}
+}
