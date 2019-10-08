@@ -1,0 +1,24 @@
+##
+# Load files needed by copying them to the specified destination
+#
+# \param --load-copy-source       source, relative to [run_dir]
+# \param --load-copy-destination  destination, relative to the current
+#                                 working (build) directory
+#
+
+
+proc load_copy_source      { } { return [get_cmd_arg --load-copy-source ""] }
+proc load_copy_destination { } { return [get_cmd_arg --load-copy-destination ""] }
+
+
+##
+# The files are loaded implicitly via TFTP to the target machine
+#
+proc run_load { } {
+	global load_spawn_id
+	set load_spawn_id -1
+
+	exec cp -R [run_dir]/[load_copy_source] [load_copy_destination]
+
+	return true
+}
