@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -qy --no-install-recommends \
   gcc \
   gdisk \
   git \
+  golang-go \
   gperf \
   gpg \
   gpg-agent \
@@ -90,3 +91,7 @@ RUN echo "fuse" >> /etc/modules
 COPY contrib/*.tar.xz $GENODE_CONTRIB_DIR/
 COPY toolchain/*.tar.xz $GENODE_TOOLCHAIN_DIR/
 COPY toolchain/netperf-* /usr/bin/
+
+ENV GOPATH /usr
+RUN go get github.com/fullstorydev/grpcurl
+RUN go install github.com/fullstorydev/grpcurl/cmd/grpcurl
