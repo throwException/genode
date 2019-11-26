@@ -5,13 +5,19 @@ stages:
 
 
 variables:
-    SDK_BASE_CACHE:   "$CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/sdk/base:cache"
-    SDK_BASE_IMAGE:   "$CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/sdk/base:pipeline-$CI_PIPELINE_IID"
-    SDK_SCULPT_IMAGE: "$CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/sdk/sculpt:pipeline-$CI_PIPELINE_IID"
+    SDK_BASE_CACHE:    "$CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/sdk/base:cache"
+    SDK_BASE_IMAGE:    "$CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/sdk/base:pipeline-$CI_PIPELINE_IID"
+    SDK_SCULPT_IMAGE:  "$CI_REGISTRY/$CI_PROJECT_NAMESPACE/$CI_PROJECT_NAME/sdk/sculpt:pipeline-$CI_PIPELINE_IID"
+
+    GENODE_WORLD_REPO: "https://gitlab-ci-token:${CI_JOB_TOKEN}@gitlab.com/gapfruit/development/genode-world.git"
+    GENODE_WORLD_HASH: 4b42e41f03e8f2d7789d7fba1e2394659241e5be
 
 
 sdk-base:
     stage: sdk-base
+    tags:
+        - docker
+    interruptible: true
     image: docker:stable
     services:
         - docker:dind
@@ -33,6 +39,9 @@ sdk-base:
 .prepare_base:
     stage: prepare
     image: $SDK_BASE_IMAGE
+    tags:
+        - ports/prepare
+    interruptible: true
     script:
         - ./tool/ports/prepare_port $PORTS -j8
 
@@ -78,6 +87,25 @@ libports:
                 x86emu xz zlib jitterentropy"
 
 
+netperf:
+    extends: .prepare_base
+    before_script:
+        - NETPERF_DIR="$(tool/ports/current netperf)"
+        - NETPERF_BIN="netperf-2.6.0"
+    script:
+        - tool/ports/prepare_port netperf
+        - cd $NETPERF_DIR/src/app/netperf
+        - ./configure
+        - make
+        - cd $CI_PROJECT_DIR
+        - mkdir -p toolchain
+        - cp $NETPERF_DIR/src/app/netperf/src/netperf toolchain/$NETPERF_BIN
+    artifacts:
+        paths:
+            - toolchain/$NETPERF_BIN
+            - contrib/*.tar.xz
+
+
 ports:
     extends: .prepare_base
     variables:
@@ -87,9 +115,56 @@ ports:
 world-ports:
     extends: .prepare_base
     before_script:
-        - git clone https://github.com/genodelabs/genode-world.git repos/world
+        - git clone $GENODE_WORLD_REPO repos/world
+        - git -C repos/world reset --hard $GENODE_WORLD_HASH
     variables:
         PORTS: "jdk jdk_generated"
+
+
+protobuf_grpc:
+    extends: .prepare_base
+    before_script:
+        - git clone $GENODE_WORLD_REPO repos/world
+        - git -C repos/world reset --hard $GENODE_WORLD_HASH
+        - TOOLCHAIN_HASH="$(cat repos/world/ports/protobuf_grpc-host.hash)"
+        - TOOLCHAIN_ARCHIVE="$(echo genode-protobuf_grpc-host-$TOOLCHAIN_HASH).tar.xz"
+        - PORT_HASH="$(cat repos/world/ports/protobuf_grpc-host.hash)"
+        - PORT_VERSION="19.11"
+        - mkdir -p toolchain
+    script:
+        - if ! tar xPf toolchain/$TOOLCHAIN_ARCHIVE; then
+             repos/world/tool/tool_chain_protobuf build install MAKE_JOBS=4;
+             tar cJf toolchain/$TOOLCHAIN_ARCHIVE /usr/local/genode/protobuf_grpc/$PORT_VERSION --absolute-names;
+          fi
+        - tool/ports/prepare_port protobuf_grpc
+
+        # delete all toolchain archives, except the current
+        - find toolchain/ -mindepth 1 -maxdepth 1 -type f -regextype sed
+                          -regex ".*/genode-protobuf_grpc-host-[a-f0-9]\{40\}\.tar\.xz"
+                        ! -name "genode-protobuf_grpc-host-$TOOLCHAIN_HASH.tar.xz"
+                          -print -delete
+
+        # delete all port archives, except the current
+        - for port in "protobuf_grpc-host" "protobuf_grpc"; do
+                current=$(basename $(tool/ports/current $port));
+                find contrib/ -mindepth 1 -maxdepth 1 -type f -regextype sed
+                              -regex ".*/$port-[a-f0-9]\{40\}\.tar.xz"
+                            ! -name "$current.tar.xz"
+                              -print -delete;
+          done
+
+        # list toolchain and port archives
+        - ls -lh toolchain
+        - ls -lh contrib/*.tar.xz
+    cache:
+        key: ${CI_JOB_NAME}
+        paths:
+            - toolchain/$TOOLCHAIN_ARCHIVE
+            - contrib/*.tar.xz
+    artifacts:
+        paths:
+            - toolchain/$TOOLCHAIN_ARCHIVE
+            - contrib/*.tar.xz
 
 
 qt5:
@@ -97,17 +172,17 @@ qt5:
     before_script:
         - TOOLCHAIN_HASH="$(cat repos/libports/ports/qt5-host.hash)"
         - TOOLCHAIN_ARCHIVE="$(echo genode-qt5-$TOOLCHAIN_HASH).tar.xz"
-        - QT5_HASH="$(cat repos/libports/ports/qt5.hash)"
-        - QT5_VERSION="19.08"
+        - PORT_HASH="$(cat repos/libports/ports/qt5.hash)"
+        - PORT_VERSION="19.08"
         - mkdir -p toolchain
     script:
         - if ! tar xPf toolchain/$TOOLCHAIN_ARCHIVE; then
               tool/tool_chain_qt5 build install MAKE_JOBS=4;
-              tar cJf toolchain/$TOOLCHAIN_ARCHIVE /usr/local/genode/qt5/$QT5_VERSION --absolute-names;
+              tar cJf toolchain/$TOOLCHAIN_ARCHIVE /usr/local/genode/qt5/$PORT_VERSION --absolute-names;
           fi
         - tool/ports/prepare_port qt5
         - rm -fv contrib/qt5-host-$TOOLCHAIN_HASH/*.tar.*
-        - rm -fv contrib/qt5-$QT5_HASH/*.tar.*
+        - rm -fv contrib/qt5-$PORT_HASH/*.tar.*
 
         # delete all toolchain archives, except the current
         - find toolchain/ -mindepth 1 -maxdepth 1 -type f -regextype sed
@@ -141,6 +216,9 @@ qt5:
 
 .toolchain_base:
     extends: .prepare_base
+    tags:
+        - ports/prepare
+    interruptible: true
     when: manual
     before_script:
         - apt-get install -qy --no-install-recommends
@@ -156,10 +234,9 @@ qt5:
         - mkdir -p toolchain
     script:
         - tool/ports/prepare_port binutils gcc
-        - ls -lh /usr/local/genode-gcc || true
-        - tool/tool_chain arm x86 install MAKE_JOBS=4
-        - ls -lh /usr/local/genode-gcc || true
-        - tar cJf toolchain/$TOOLCHAIN_ARCHIVE /usr/local/genode-gcc --absolute-names;
+        - tool/tool_chain $PLATFORM install MAKE_JOBS=4
+        - ls -lh /usr/local/genode/tool || true
+        - tar cJf toolchain/$TOOLCHAIN_ARCHIVE /usr/local/genode/tool --absolute-names;
     cache:
         key: ${CI_JOB_NAME}
         paths:
@@ -176,6 +253,12 @@ toolchain_arm:
         PLATFORM: arm
 
 
+toolchain_armhf:
+    extends: .toolchain_base
+    variables:
+        PLATFORM: armhf
+
+
 toolchain_x86:
     extends: .toolchain_base
     variables:
@@ -184,6 +267,9 @@ toolchain_x86:
 
 sdk-sculpt:
     stage: sdk-sculpt
+    tags:
+        - docker
+    interruptible: true
     image: docker:stable
     services:
         - docker:dind
