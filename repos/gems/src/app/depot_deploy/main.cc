@@ -74,9 +74,20 @@ struct Depot_deploy::Main
 
 		/* generate init config containing all configured start nodes */
 		_init_config_reporter.generate([&] (Xml_generator &xml) {
+
 			Xml_node static_config = config.sub_node("static");
 			static_config.with_raw_content([&] (char const *start, size_t length) {
 				xml.append(start, length); });
+
+			if (config.has_sub_node("heartbeat")) {
+				if (config.has_sub_node("report")) {
+					const Xml_node& report_config = config.sub_node("report");
+					xml.append(report_config.addr(), report_config.size());
+				}
+				const Xml_node& heartbeat_config = config.sub_node("heartbeat");
+				xml.append(heartbeat_config.addr(), heartbeat_config.size());
+			}
+
 			Child::Depot_rom_server const parent { };
 			_children.gen_start_nodes(xml, config.sub_node("common_routes"),
 			                          parent, parent);
