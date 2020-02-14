@@ -40,7 +40,8 @@ SRC_CC        = main.cc \
                 env_reinit.cc \
                 heartbeat.cc \
                 thread.cc \
-                thread_myself.cc
+                thread_myself.cc \
+		core_rpc_entry.cc
 
 INC_DIR      += $(REP_DIR)/src/core/include \
                 $(GEN_CORE_DIR)/include \

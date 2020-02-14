@@ -1,11 +1,13 @@
 /*
  * \brief  Server-side API of the RPC framework
  * \author Norman Feske
+ * \author Stefan Thöni
  * \date   2006-04-28
  */
 
 /*
- * Copyright (C) 2006-2017 Genode Labs GmbH
+ * Copyright (C) 2006-2020 Genode Labs GmbH
+ * Copyright (C) 2020 gapfruit AG
  *
  * This file is part of the Genode OS framework, which is distributed
  * under the terms of the GNU Affero General Public License version 3.
@@ -27,10 +29,14 @@ namespace Genode {
 
 	class Ipc_server;
 
+	class Native_context;
+
 	template <typename, typename> class Rpc_dispatcher;
 	class Rpc_object_base;
 	template <typename, typename> struct Rpc_object;
 	class Rpc_entrypoint;
+
+	size_t _native_stack_size(size_t stack_size);
 
 	class Signal_receiver;
 }
@@ -278,6 +284,16 @@ struct Genode::Rpc_object : Rpc_object_base, Rpc_dispatcher<RPC_INTERFACE, SERVE
 	}
 };
 
+/**
+ * Native context of an RPC entry point
+ *
+ * Used in base-linux to store the poll (select) fdset
+ */
+class Genode::Native_context
+{
+	public:
+		virtual ~Native_context() { }
+};
 
 /**
  * RPC entrypoint serving RPC objects
@@ -344,6 +360,7 @@ class Genode::Rpc_entrypoint : Thread, public Object_pool<Rpc_object_base>
 		Pd_session       &_pd_session;        /* for creating capabilities             */
 		Exit_handler      _exit_handler { };
 		Capability<Exit>  _exit_cap     { };
+		Native_context*   _native_context { nullptr }; /* used in base-linux to store polled file/socket descriptors */
 
 		/**
 		 * Access to kernel-specific part of the PD session interface
@@ -399,6 +416,12 @@ class Genode::Rpc_entrypoint : Thread, public Object_pool<Rpc_object_base>
 		 */
 		void entry() override;
 
+		/**
+		 * Called by implementation specific entry function
+     * with created native context
+     */
+		void _entry(Native_context* native_context);
+
 	public:
 
 		/**
@@ -415,7 +438,16 @@ class Genode::Rpc_entrypoint : Thread, public Object_pool<Rpc_object_base>
 		               char const *name, bool start_on_construction = true,
 		               Affinity::Location location = Affinity::Location());
 
+		Rpc_entrypoint(const Genode::Rpc_entrypoint&) = delete;
+
 		~Rpc_entrypoint();
+
+		Genode::Rpc_entrypoint operator=(const Genode::Rpc_entrypoint&) = delete;
+
+		/*
+		 * Native context of the RPC entry point
+		 */
+		Native_context* native_context() { return _native_context; }
 
 		/**
 		 * Associate RPC object with the entry point

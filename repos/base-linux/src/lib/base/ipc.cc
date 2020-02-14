@@ -2,11 +2,13 @@
  * \brief  Socket-based IPC implementation for Linux
  * \author Norman Feske
  * \author Christian Helmuth
+ * \author Stefan Thoeni
  * \date   2011-10-11
  */
 
 /*
  * Copyright (C) 2011-2017 Genode Labs GmbH
+ * Copyright (C) 2019 gapfruit AG
  *
  * This file is part of the Genode OS framework, which is distributed
  * under the terms of the GNU Affero General Public License version 3.
@@ -465,7 +467,8 @@ void Genode::ipc_reply(Native_capability caller, Rpc_exception_code exc,
 Genode::Rpc_request Genode::ipc_reply_wait(Reply_capability const &last_caller,
                                            Rpc_exception_code      exc,
                                            Msgbuf_base            &reply_msg,
-                                           Msgbuf_base            &request_msg)
+                                           Msgbuf_base            &request_msg,
+                                           Rpc_entrypoint&)
 {
 	/* when first called, there was no request yet */
 	if (last_caller.valid() && exc.value != Rpc_exception_code::INVALID_OBJECT)
@@ -514,9 +517,10 @@ Genode::Rpc_request Genode::ipc_reply_wait(Reply_capability const &last_caller,
 }
 
 
-Ipc_server::Ipc_server()
+Ipc_server::Ipc_server(Rpc_entrypoint& entrypoint)
 :
-	Native_capability(Capability_space::import(Rpc_destination(), Rpc_obj_key()))
+	Native_capability(Capability_space::import(Rpc_destination(), Rpc_obj_key())),
+	_entrypoint(entrypoint)
 {
 	/*
 	 * If 'thread' is 0, the constructor was called by the main thread. By
