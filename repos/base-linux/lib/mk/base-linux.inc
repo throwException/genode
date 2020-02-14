@@ -6,6 +6,6 @@
 include $(BASE_DIR)/lib/mk/base.inc
 
 SRC_CC += platform_env.cc
-SRC_CC += platform.cc
+SRC_CC += rpc_entry.cc
 
 LIBS += syscall-linux

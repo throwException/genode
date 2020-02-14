@@ -13,3 +13,4 @@ SRC_CC += rpc_dispatch_loop.cc
 SRC_CC += thread_env.cc
 SRC_CC += capability.cc
 SRC_CC += rpc_entrypoint_manage.cc
+SRC_CC += rpc_cap_alloc_socketpair.cc
