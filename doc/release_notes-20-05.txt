@@ -1,0 +1,1002 @@
+
+
+              ===============================================
+              Release notes for the Genode OS Framework 20.05
+              ===============================================
+
+                               Genode Labs
+
+
+
+;intro
+;@nfeske
+
+
+
+
+Capability-based security using seccomp on Linux
+################################################
+
+;@throwException ?
+
+commit 7bf47b19826e5d45277a4306fba28d3fd98e88f6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Mar 31 13:41:50 2020 +0200
+
+    base-linux: boost max open fds to the hard rlimit
+    
+    This patch increases the default limit of the maximum number of open
+    file descriptors to the hard limit of the system. This is needed for
+    complex scenarios, which require more FDs than the default of 1024
+    at core.
+    
+    Related to issue #3581
+    
+    Fixes #3721
+
+commit 132569d12b5a695ecf2902207ba12181af97d0ec
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Apr 9 12:30:21 2020 +0200
+
+    base-linux: socket descriptor caps for RPC
+    
+    On Linux, Genode used to represent each RPC object by a socket
+    descriptor of the receiving thread (entrypoint) and a globally-unique
+    value that identifies the object. Because the latter was transferred as
+    plain message payload, clients had to be trusted to not forge the
+    values. For this reason, Linux could not be considered as a productive
+    Genode base platform but remained merely a development vehicle.
+    
+    This patch changes the RPC mechanism such that each RPC object is
+    represented by a dedicated socket pair. Entrypoints wait on a set of
+    the local ends of the socket pairs of all RPC objects managed by the
+    respective entrypoint. The epoll kernel interface is used as the
+    underlying mechanism to wait for a set of socket descriptors at the
+    server side.
+    
+    When delegating a capability, the remote end of the socket pair is
+    transferred to the recipient along with a plaintext copy of the
+    socket-descriptor value of the local end. The latter value serves as a
+    hint for re-identifiying a capability whenever it is delegated back to
+    its origin. Note that the client is not trusted to preserve this
+    information. The integrity of the hint value is protected by comparing
+    the inode values of incoming and already present capablities at the
+    originating site (whenever the capability is invoked or presented to the
+    owner of the RPC object).
+    
+    The new mechanism effectively equips base-linux with Genode's capablity
+    model as described in the Chapter 3 of the Genode Foundations book.
+    That said, the sandboxing of components cannot be assumed at this point
+    because each component has still direct access to the Linux system-call
+    interface.
+    
+    This patch is based on the extensive exploration work conducted by
+    Stefan Thoeni who strongly motivated the inclusion of this feature into
+    Genode.
+    
+    Issue #3581
+
+commit db63239128e4e9b77b22c9d65821404d0be0e2d5
+Author: Stefan Thöni <stefan.thoeni@gapfruit.com>
+Date:   Tue Sep 17 14:40:52 2019 +0200
+
+    base-linux: enabled seccomp
+    
+    base-linux uses seccomp to reduce the available system calls
+    to the minimum set needed to run base-linux. There are still
+    some syscalls that allow accessing global state which should
+    be further reduced.
+    
+    The combination of seccomp and socket descriptor caps should
+    provide an intermediate level of security for base-linux
+    thereby enabling base-linux as a migration path from using
+    the Linux kernel to the use of microkernel-based Genode.
+    
+    Fixes #3581
+
+Feature-completeness of the consistent block encrypter
+######################################################
+
+;@m-stein
+
+
+New revision of the Genode Foundations book
+###########################################
+
+The "Genode Foundations" book received its annual update. It is available at
+the [https://genode.org] website as a PDF document and an online version.
+The most noteworthy additions and changes are:
+
+: <div class="visualClear"><!-- --></div>
+: <p>
+:  <div style="clear: both; float: left; margin-right:20px;">
+:   <a class="internal-link" href="https://genode.org">
+:    <img class="image-inline" src="https://genode.org/documentation/genode-foundations-title.png">
+:   </a>
+:  </div>
+: </p>
+
+* The feedback-control-system composition
+* Removal of outdated components and APIs (noux, slave API)
+* Additional features ('<alias>', unlabeled LOG sessions)
+* Recommended next steps after reading of the getting-started section
+* Updated API reference ('Mutex', 'Blockade', 'Request_stream', 'Sandbox')
+
+: <div class="visualClear"><!-- --></div>
+
+To examine the changes in detail, please refer to the book's
+[https://github.com/nfeske/genode-manual/commits/master - revision history].
+
+
+The great consolidation
+#######################
+
+;@nfeske
+
+Updated block servers using 'Request_stream' API
+================================================
+
+;@ssumpf
+
+commit 6e54cad44c69e2b3e9f134ddf0f876103b44da3f
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Fri Feb 21 08:37:08 2020 +0100
+
+    usb_block: switch to Request_stream API
+    
+    - remove old 'Driver' interface
+    - implement Request stream front end
+    - fix some namespacing
+    
+    issue #3661
+
+commit 150d1437558341822146d1bc1595f6b7ddb843a7
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Wed Mar 4 22:12:20 2020 +0100
+
+    os: use Request_stream API in NVMe driver
+    
+    As a result of the API change the memory handling could be simplified.
+    Since the Block session dataspace is now directly used for DMA, we
+    actually only have to provide the memory for setting up PRP lists for
+    large requests (for the moment more than 8 KiB of data).
+    
+    As we limit the maximum data transfer length to 2 MiB, we get by with
+    just a page per request. Those memory is allocated beforehand for the
+    maximum number of I/O requests, which got bumbed to 512 entries. Since
+    not all NVMe controllers support such large a maximum data transfer
+    length and this many entries, especially older ones, the values are
+    capped according to the properties of the controller during
+    initialization. (The memory demands of the component are around 3 MiB
+    due to setting up for the common case, even if a particular controller
+    is only able to make use of less.)
+    
+    (Although there are controllers whose maximum memory page size is more
+    than 4K, the driver is hardcoded to solely use 4K pages.)
+    
+    In addition to those changes, the driver now supports the 'SYNC' and
+    'TRIM' operations of the Block session by using the NVMe 'FLUSH' and
+    'WRITE_ZEROS' commands.
+    
+    Fixes #3702.
+
+
+Migration from 'Lock' to 'Mutex' and 'Blockade'
+===============================================
+
+;@alex-ab
+
+commit e87d60ddf7ecfd44b9afd1a4591913740e7dfed1
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Tue Feb 18 15:29:47 2020 +0100
+
+    core: use Mutex/Blockade
+    
+    Issue #3612
+
+commit 3956530634f03cfd2a2075c7a857c7138b4807c1
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Feb 19 16:26:40 2020 +0100
+
+    base: use Mutex/Blockade
+    
+    Issue #3612
+
+commit 22d71d5a8b9f05f64cf7d1b82827bd47036e690d
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Feb 20 15:47:08 2020 +0100
+
+    os: use Mutex/Blockade
+    
+    Issue #3612
+
+Retired Noux runtime environment
+================================
+
+;@nfeske
+
+commit 34a60b56f60064a7db2b70e7829fbcc0254b19b4
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Mar 6 11:10:23 2020 +0100
+
+    Remove noux from fs_query.run
+    
+    Issue #3696
+
+commit cc8552f81e1f0916da1562a862380c2afa7a38a4
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Mar 6 11:16:15 2020 +0100
+
+    Remove noux_vfs_audit.run
+    
+    This run script was merely a development vehicle.
+    
+    Issue #3696
+
+commit cacbad1bd832b82a67568ab0e47439f78045ebf3
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Mar 6 15:00:04 2020 +0100
+
+    Remove noux from ssh_terminal.run
+    
+    Issue #3696
+
+commit e3bc77c386ff4e06dcbbbd2bca9c6bf84df41b98
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri Mar 6 19:06:02 2020 +0100
+
+    Remove noux from SSH exec terminal
+    
+    This patch replaces the former Noux instance by a sub init that hosts
+    the combination of VFS + fs_rom + bash. If bash exits, the whole sub
+    init exits, which implicitly tears down the terminal session used by the
+    sub init. The latter is expected by the test sequence.
+    
+    Issue #3696
+
+commit 1d480e3329b6afaafa00e913c676eaef9426bead
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Mar 10 08:46:35 2020 +0100
+
+    Remove noux from tool-chain test
+    
+    Issue #3696
+
+commit a7e7eeec384daed7e0bccbd05a84bbd5066b4b68
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Mar 17 14:31:06 2020 +0100
+
+    Remove noux from Vim example scenario
+    
+    Issue #3696
+
+commit b8738dee9058da82c567d3c8649884cd268b007e
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Mar 17 14:33:26 2020 +0100
+
+    Remove noux_terminal_fs.run script
+    
+    This run script tested the terminal VFS plugin as a new feature of noux.
+    In the meantime, the plugin remains as the only way for the interaction
+    of command-line-based applications with the terminal session. Hence,
+    the mechanism is now stressed by many other scenarios.
+    
+    Issue #3696
+
+commit 50a1e540a07e39f2014a146d03e898cc82398e52
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Mar 17 14:38:43 2020 +0100
+
+    Remove noux_bash.run script
+    
+    This run script is superseded by the bash.run script.
+    
+    Issue #3696
+
+commit 5a02b5fd2385cc2dbcefbe776fffb95175ccfdfb
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Mar 17 14:39:38 2020 +0100
+
+    Remove noux_fork.run script
+    
+    This run script is superseded by pkg/test-fork.
+    
+    Issue #3696
+
+commit c086bba71abf5f9137be1ff0e1c59e588c1f9b61
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Mar 17 14:41:25 2020 +0100
+
+    Remove noux_fs.run
+    
+    The test exercised the mounting of an ext2 file system in the noux
+    runtime. This feature is nowadays routinely stressed by Sculpt OS.
+    
+    Issue #3696
+
+commit 951f484fad7fff8ee624f2a5467ddda6b3287a29
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Mar 17 14:50:43 2020 +0100
+
+    Remove noux_gdb.run script
+    
+    This interactive run script is not regularly tested nor used.
+    
+    Issue #3696
+
+commit 2f598e5680566c400463d3133207395cedea2ac8
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Mar 17 15:43:06 2020 +0100
+
+    Remove noux_uname.run script
+    
+    This run script is outdated and not regularly tested. In fact, the
+    tested mechanism (obtaining values from a '.sysctl/' directory) is
+    nowhere to be found, neither in noux nor the libc. The test still
+    returns success as it merely checks for the completion of the sequence,
+    not the printed results. Hence, it is not worth preserving.
+    
+    Issue #3696
+
+commit 4961c84f12bdae339c3f9012974e4ff220558dbc
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Mar 17 16:26:58 2020 +0100
+
+    Remove noux from vbox_share.inc
+    
+    This snippet is used by the vbox5_win7_64_share.run script.
+    
+    Issue #3696
+
+commit cf052996d372b805efd3690fccbd01b9b56356b9
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Mar 18 10:45:28 2020 +0100
+
+    Remove pkg/noux-build-x86
+    
+    Use-case-specific Unix runtimes should better be realized via Goa now.
+    
+    Issue #3696
+
+commit 208294b0d383346e5ba9b9b6e2cc581ea30b93e1
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Mar 18 11:01:05 2020 +0100
+
+    Turn pkg/noux-system into pkg/system_shell
+    
+    The new package does no longer require noux.
+    
+    Issue #3696
+
+commit ca5c25ac04bcc2c2071a1149fffbfa2d68786282
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Mar 25 11:39:45 2020 +0100
+
+    sculpt: replace log-noux instance by stdin2out
+    
+    Issue #3696
+
+commit 5347278136d65648ad026c340ea9f5ddf0c09ee6
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Mar 25 17:08:36 2020 +0100
+
+    sculpt: perform prepare step without noux
+    
+    Issue #3696
+
+commit 42a77c531a49027c954a259b20be6fad1c70303e
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Mar 25 20:23:40 2020 +0100
+
+    sculpt: remove noux runtime from inspect view
+    
+    Issue #3696
+
+commit 4dd110ce5ef4d4a04475eee14210c99103649bcb
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Mar 26 16:37:36 2020 +0100
+
+    Remove noux runtime
+    
+    The feature set of noux is fully covered by the regular C runtime now.
+    
+    Fixes #3696
+
+
+Removed components and features
+===============================
+
+;@nfeske
+
+commit f14cc2edabfea9776d501488f9f3ed94f1c2334a
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon Apr 20 14:00:57 2020 +0200
+
+    Replace use of ram_fs by VFS server
+    
+    Issue #3734
+
+commit 01bf32b998ae61562bd5c465456a722d740a41aa
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue Apr 21 16:27:07 2020 +0200
+
+    Remove ram_fs server
+    
+    Fixes #3734
+
+commit 840f383e468f71df41e0fd8076b334aa852e5430
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Apr 22 16:15:56 2020 +0200
+
+    Remove input_merger component
+    
+    Fixes #3736
+
+commit c12d76686e526deace52334710b2a612fa8df786
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed Apr 22 16:38:36 2020 +0200
+
+    Move OpenVPN to genode-world repository
+    
+    Fixes #3737
+
+commit 1bf796d69a3c88620f25de7fd450fe96ec578b75
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Thu Apr 23 12:09:35 2020 +0200
+
+    Remove Rust support
+    
+    Fixes #3488
+
+commit 07502ce6bbc79a90774645f53eb8471fc89dd55d
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri May 8 16:09:35 2020 +0200
+
+    Remove Python2
+    
+    Fixes #3751
+
+commit c39a342fe5cd57e88221f9ac1ff0a4825b451a97
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri May 8 16:21:20 2020 +0200
+
+    Remove use of <configfile> feature of init
+    
+    Issue #3753
+
+commit cb5b688eb906e26dbfe81b6f2791dce580196d2d
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Fri May 8 17:02:22 2020 +0200
+
+    Remove <configfile> feature from init
+    
+    Fixes #3753
+
+
+Board support outside the Genode main repository
+================================================
+
+;@skalk
+
+commit f051065582c198f36be12ec6fe0833e1ff9561c1
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Mar 23 14:45:58 2020 +0100
+
+    Retire OMAP4 support
+    
+    Fix #2850
+
+commit 0e49336b96b8438591e5d688799640d410d1c73c
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Apr 7 00:42:50 2020 +0200
+
+    Retire Exynos 5 support (fix #3725)
+
+
+Base framework and OS-level infrastructure
+##########################################
+
+New platform driver for the ARM universe
+========================================
+
+;@skalk
+
+commit 337c20116d9782efccbca21f8aae36072f02de8c
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Apr 22 17:55:18 2020 +0200
+
+    os: refactor i.MX53 interactive drivers (ref #3299)
+    
+    * Remove input driver specific to i.MX53 tablet board from QSB driver pkg
+    * Move GPIO settings for QSB LVDS backlight out of framebuffer driver into
+      GPIO driver config
+    * Move PWM driver functionality out of framebuffer driver
+    * Make framebuffer driver configureable, and less dependent on
+      platform driver i.MX53 specifics
+
+commit b7aaeb58736b1df90902650f874718556e0289b6
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu May 14 15:28:46 2020 +0200
+
+    Annotate io_mem session interface with RAM_QUOTA
+    
+    Ref #3299
+
+commit 72c6f3aa159582612db06021759c7e6159397882
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu May 14 15:30:31 2020 +0200
+
+    Annotate irq session interface with RAM_QUOTA
+    
+    Ref #3299
+
+commit 2aa254119aa35b19a04c6639aa169d8bcc883d1c
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri May 22 12:47:16 2020 +0200
+
+    usb_drv: include specific rpi platform_session API
+    
+    The rpi_usb_drv uses the rpi-specific variant of the platform_session API.
+    Therefore, it has to include it excplicitly.
+    
+    Ref #3299
+
+commit 1bb89ee3ee9710663a92efad0f5601bb87dea0b4
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu May 14 15:35:40 2020 +0200
+
+    os: introduce common platform driver for ARM
+    
+    Ref #3299
+
+commit a708972aff8ecaaffd16a06ffadc6e304bbae007
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri May 22 12:19:03 2020 +0200
+
+    os: pl050, pl11x, lan9118 use ARM platform driver
+    
+    Make the framebuffer driver for pl11x chipsets,
+    the ps2 input driver for pl050, and the lan9116 NIC driver independent from
+    the pbxa9 board by using the newly introduced common ARM platform driver API.
+    
+    Ref #3299
+
+Block-device sync operation support
+===================================
+
+;@cnuke
+
+commit 5225d12381153b9fe5a09a287765ad208942fa45
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Feb 19 14:10:17 2020 +0100
+
+    ahci: add sync operation support
+    
+    - implemement 'flush cache ext' for ATA
+    - enable sync operation for request stream
+    
+    issue #3636
+
+commit ea78d85d3576487574ca8a7bf60eaf6a87599806
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon May 4 14:24:39 2020 +0200
+
+    ahci: SYNC with empty NCQ queue only
+    
+    Fixes #3746
+
+commit ea78d85d3576487574ca8a7bf60eaf6a87599806
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Mon May 4 14:24:39 2020 +0200
+
+    ahci: SYNC with empty NCQ queue only
+    
+    Fixes #3746
+
+
+commit 2495a86aff3c1ad6fef413fbf07b84f4359cd0ce
+Author: Sebastian Sumpf <sebastian.sumpf@genode-labs.com>
+Date:   Wed Feb 19 18:53:14 2020 +0100
+
+    block_tester: add 'sync' command to replay
+    
+    issue #3636
+
+commit a71ef1642314cb58c57cfcdfce808dc6a9650b26
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Tue Feb 18 14:43:11 2020 +0100
+
+    vfs: implement 'sync' in Block VFS plugin
+    
+    Fixes #3659.
+
+commit 336228f3577e4065d6a3a28cf9ee7d4e5b5d01f1
+Author: Josef Söntgen <josef.soentgen@genode-labs.com>
+Date:   Mon Mar 23 17:13:39 2020 +0100
+
+    os: handle SYNC packet in lx_fs
+    
+    Call 'fsync(2)' on files and directories.
+    
+    Fixes #3711.
+
+
+Base API refinements
+====================
+
+;@nfeske
+
+Deprecation of unsafe 'Xml_node' methods
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+commit be65c4acd268e7bf2bc6140b2085e0ff99e9000c
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Wed May 6 19:06:25 2020 +0200
+
+    Avoid use of deprecated Xml_node methods
+    
+    Issue #3755
+
+commit dd0c1575f56717c1960c7441bb759f7cda315b1b
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue May 5 21:54:42 2020 +0200
+
+    Xml_node: mark deprecated methods
+    
+    Fixes #3755
+
+
+Replaced 'Genode::strncpy' by 'Genode::copy_cstring'
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+commit 8d12944afbd5918078e98d3033a7fd94e39cfeca
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Mon May 11 16:10:27 2020 +0200
+
+    Replace Genode::strncpy by Genode::copy_cstring
+    
+    - Since Genode::strncpy is not 100% compatible with the POSIX
+      strncpy function, better use a distinct name.
+    
+    - Remove bogus return value from the function, easing the potential
+      enforcement of mandatory return-value checks later.
+    
+    Fixes #3752
+
+
+LOG session
+~~~~~~~~~~~
+
+commit a9f0e47ea367a8fc597a7eeb21024e244768bd75
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue May 5 13:51:05 2020 +0200
+
+    Remove return value of Log_session::write
+    
+    Fixes #3749
+
+
+Removed 'Allocator_guard'
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+commit 9d67f9fc8e1dfccc14affcfcafc5c68d32f16b49
+Author: Norman Feske <norman.feske@genode-labs.com>
+Date:   Tue May 5 14:27:29 2020 +0200
+
+    Remove Allocator_guard
+    
+    This patch removes old 'Allocator_guard' utility and replaces its use
+    with the modern 'Constrained_ram_allocator'.
+    
+    The adjustment of core in this respect has the side effect of a more
+    accurate capability accounting in core's CPU, TRACE, and RM services.
+    In particular, the dataspace capabilities needed for core-internal
+    allocations via the 'Sliced_heap' are accounted to the client now.
+    The same goes for nitpicker and nic_dump as other former users of the
+    allocator guard. Hence, the patch also touches code at the client and
+    server sides related to these services.
+    
+    The only remaining user of the 'Allocator_guard' is the Intel GPU
+    driver. As the adaptation of this component would be too invasive
+    without testing, this patch leaves this component unchanged by keeping a
+    copy of the 'allocator_guard.h' locally at the component.
+    
+    Fixes #3750
+
+
+C runtime
+=========
+
+Self-hosted Genode tool chain
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;@nfeske
+
+; refinements wrt pipes, error handling -> Genode tool chain
+
+
+Decoupling of stdc++ from Genode's base ABI
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;@chelmuth
+
+commit 4ab990ad5bdb64def4bc835c15137ee9b3a890fd
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Tue Mar 31 13:10:40 2020 +0200
+
+    libc: provide C++ runtime symbols in ABI
+    
+    This commit puts all C++ runtime/support symbols of ld.lib.so in a
+    dedicated section of base/lib/symbols/ld and mirrors the section to
+    libports/lib/symbols/libc. So, the libc ABI resolves potential C++
+    runtime dependencies of base-ABI-agnostic components at link time. The
+    runtime resolution is done by the linker by symbol lookup in ld.lib.so.
+    
+    Issue #3720
+
+
+Redirection of LOG output to TRACE events
+=========================================
+
+;@tomga (?)
+
+commit 1d9a2dce94673b15f389a500e5f016d9e89ca774
+Author: Tomasz Gajewski <tomga@wp.pl>
+Date:   Wed Apr 1 01:50:26 2020 +0200
+
+    trace: extend policy with log_output
+    
+    Issue #3714
+
+commit db8ec81e9f54b696d3793e82e7e0cf5a2928fd91
+Author: Tomasz Gajewski <tomga@wp.pl>
+Date:   Wed Apr 1 01:51:54 2020 +0200
+
+    trace: log_output policy that redirects logs to trace
+    
+    Issue #3714
+
+commit 870d348d77c1afb01dfd2482fe623bef5f5ddbf1
+Author: Tomasz Gajewski <tomga@wp.pl>
+Date:   Tue Apr 7 23:47:31 2020 +0200
+
+    trace: redirect logs to trace based on policy
+    
+    If trace is enabled for component than an attempt to put message into
+    trace buffer is performed using log_output policy. If it succeeds than
+    message is not put to logs using log service.
+    
+    Fixes #3714
+
+commit 4639978b3ac062cdc1811bfd6237f3680921b220
+Author: Tomasz Gajewski <tomga@wp.pl>
+Date:   Wed Apr 1 00:39:24 2020 +0200
+
+    trace_logger: avoid output of empty lines
+    
+    It avoids output of empty lines in output buffer if traced messages end
+    with \n (what is common with messages logged from dde_linux).
+    
+    Issue #3714
+
+commit fca2a05adf3272ef78ff473afec3181114d9b702
+Author: Tomasz Gajewski <tomga@wp.pl>
+Date:   Thu Apr 9 12:16:45 2020 +0200
+
+    trace: extend test for log_output
+    
+    Issue #3714
+
+
+MSI-X support on x86
+====================
+
+;@alex-ab
+
+commit d657b61f1b8be8f07f8a097076e21a3a134572f4
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Feb 6 14:54:16 2020 +0100
+
+    x86: support msi-x by platform driver
+    
+    Fixes #3699
+
+
+Optimized retrieval of TRACE subject information
+================================================
+
+;@alex-ab
+
+commit 1a94338389f233870bea0d6d0665b207fa63fab6
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Thu Jan 16 18:00:30 2020 +0100
+
+    trace: support to request subject infos batched
+    
+    Optimize requesting the Subject_infos from O(n) to O(1) RPC call.
+    
+    Issue #3610
+
+commit 80d89c20fdb231f87dce189ef76d9e2ec1d1dc04
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Tue Apr 28 08:50:13 2020 +0200
+
+    top: use batched subject_infos of trace session
+    
+    Issue #3610
+
+
+
+Library updates
+===============
+
+;@chelmuth
+
+commit 7d2eb71094e1634bc2153dc27ca9175024da1b22
+Author: Christian Helmuth <christian.helmuth@genode-labs.com>
+Date:   Wed Mar 18 14:57:51 2020 +0100
+
+    openssl: update to current version 1.0.2u
+
+
+Platforms
+#########
+
+Execution on bare hardware (base-hw)
+====================================
+
+Consolidated virtual machine monitor for ARMv7 and ARMv8
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;@skalk
+
+commit 58db6542f87aecf44482cd354ebb673d73b5e924
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Fri Feb 21 11:35:43 2020 +0100
+
+    hw: check for security extension support in GICv2
+    
+    Ref #3638
+
+commit 74e75d7fbcda3dfb09d016d128f1567c141e83cd
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Wed Mar 25 19:09:36 2020 +0100
+
+    hw: enable virtualization support for virt_qemu
+    
+    Ref #3638
+
+commit 941e918b466f13622f13dba0290a3f5800461bd6
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Thu Nov 14 10:52:20 2019 +0100
+
+    vmm: unify armv7/v8 virtualization
+    
+    Fix #3638
+
+
+Write-combined framebuffer on x86
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;@alex-ab
+
+commit e096202b1fa47165a726e73f53278080af6a06bc
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Wed Jan 29 10:56:35 2020 +0100
+
+    hw/x86: use PAT for write combining support
+    
+    Fixes #3623
+
+
+Improved cache maintenance on ARM
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;@skalk
+
+commit 6d48b5484df270bef05be55edfcd2493dacd19ec
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Tue Mar 3 15:56:50 2020 +0100
+
+    hw: correct the ARM cache maintainance operations
+    
+    This commit fixes the following issues regarding cache maintainance
+    under ARM:
+    
+    * read out I-, and D-cache line size at runtime and use the correct one
+    * remove 'update_data_region' call from unprivileged syscalls
+    * rename 'update_instr_region' syscall to 'cache_coherent_region' to
+      reflect what it doing, namely make I-, and D-cache coherent
+    * restrict 'cache_coherent_region' syscall to one page at a time
+    * lookup the region given in a 'cache_coherent_region' syscall in the
+      page-table of the PD to prevent machine exceptions in the kernel
+    * only clean D-cache lines, do not invalidate them when pages where
+      added on Cortex-A8 and ARMv6 (MMU sees phys. memory here)
+    * remove unused code relicts of cache maintainance
+    
+    In addition it introduces per architecture memory clearance functions
+    used by core, when preparing new dataspaces. Thereby, it optimizes:
+    
+    * on ARMv7 using per-word assignments
+    * on ARMv8 using cacheline zeroing
+    * on x86_64 using 'rept stosq' assembler instruction
+    
+    Fix #3685
+
+commit ff378a8c5bda3f6d7585ca25a446d726a0ad82c0
+Author: Stefan Kalkowski <stefan.kalkowski@genode-labs.com>
+Date:   Mon Apr 6 20:44:29 2020 +0200
+
+    hw: cache maintainance on mapping removal too
+    
+    Older ARM processors like ARMv6, or Cortex A8 need to write back changes
+    of the page-tables to physical ram because the MMU does not use the cache.
+    This naturally needs to be done not only when adding a mapping,
+    but on removal too.
+    
+    Fix #3715
+
+
+Qemu-virt platform support
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+;@skalk
+
+commit dad1de186507445360aa9fc94bdc91dddcd054f8
+Author: Piotr Tworek <tworaz@tworaz.net>
+Date:   Thu Nov 28 23:29:21 2019 +0100
+
+    hw: Add interface for making basic ARM PSCI calls.
+    
+    So far this only exposes two functions allowing the code to turn on
+    additional CPUs. There is much more functionality defined by PSCI spec
+    but so far its not needed by Genode.
+    
+    Fixes #3672
+
+commit 585c4b8c69f1a5fb73a9b730c748baf1203628f9
+Author: Piotr Tworek <tworaz@tworaz.net>
+Date:   Sun Sep 15 01:10:20 2019 +0200
+
+    hw: Add support for Qemu virt arm platforms.
+    
+    This patch adds support for booting base-hw kernel on qemu-arm virt
+    machines. The arm_virt machine has 2GB of RAM, 2 Cortex A15 cores and
+    uses GICv2 interrupt controller. The arm_64_virt machine also has 2GB of
+    RAM, but has 4 Cortex A53 cores and uses GICv3. Both machines use PSCI
+    to boot additional CPU cores.
+    
+    Fixes #3673
+
+
+NOVA microhypervisor
+====================
+
+;@alex-ab
+
+commit 2064ffd64b41a60f7b6d5e9a2d5ed1e4327d81e4
+Author: Alexander Boettcher <alexander.boettcher@genode-labs.com>
+Date:   Mon Feb 3 16:19:11 2020 +0100
+
+    nova: support multidimensional affinity space
+    
+    Fixes #3635
+
+
+Linux
+=====
+
+;@nfeske
+
+commit cf55ff12ea9e4fb6745f8b549caf46f9035a7852
+Author: Pirmin Duss <pirmin@trimpim.ch>
+Date:   Wed May 13 10:48:25 2020 +0200
+
+    core-linux: make RAM quota configurable
+    
+    Add the option to configure the RAM quota for core on base-linux.
+    The environment variable GENODE_RAM_QUOTA if it exists is interpreted
+    as number of bytes to provide to the first init.
+    
+    Issue #3762
+
