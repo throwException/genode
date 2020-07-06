@@ -1,0 +1,111 @@
+set build_components {
+	test/test-file_change
+	test/test-read_file
+}
+
+build $build_components
+
+create_boot_directory
+
+import_from_depot [depot_user]/src/[base_src]
+import_from_depot [depot_user]/src/init
+import_from_depot [depot_user]/src/libc
+import_from_depot [depot_user]/src/stdcxx
+import_from_depot [depot_user]/src/vfs
+import_from_depot [depot_user]/src/vfs_import
+import_from_depot [depot_user]/src/fs_rom
+
+set config {
+<config verbose="yes">
+	<parent-provides>
+		<service name="ROM"/>
+		<service name="IRQ"/>
+		<service name="IO_MEM"/>
+		<service name="IO_PORT"/>
+		<service name="PD"/>
+		<service name="RM"/>
+		<service name="CPU"/>
+		<service name="LOG"/>
+	</parent-provides>
+	<default-route>
+		<any-service> <parent/> <any-child/> </any-service>
+	</default-route>
+	<default caps="100"/>
+	<start name="timer">
+		<resource name="RAM" quantum="1M"/>
+		<provides>
+			<service name="Timer"/>
+		</provides>
+	</start>
+	<start name="test_fs">
+		<binary name="vfs"/>
+		<resource name="RAM" quantum="4M"/>
+		<provides>
+			<service name="File_system"/>
+		</provides>
+		<config>
+			<vfs>
+				<dir name="data">
+					<ram/>
+				</dir>
+			</vfs>
+			<policy label="test-read_file -> dir" root="/"/>
+			<policy label="test-file_change -> dir" root="/data" writeable="true"/>
+		</config>
+	</start>
+	<start name="test-file_change">
+		<resource name="RAM" quantum="4M"/>
+		<config>
+			<libc stdout="/dev/log" stderr="/dev/log" rtc="/dev/rtc"/>
+			<vfs>
+				<dir name="dev">
+					<log/>
+					<null/>
+					<inline name="rtc">2000-01-01 00:00</inline>
+				</dir>
+				<dir name="dir">
+					<fs label="dir"/>
+				</dir>
+			</vfs>
+		</config>
+		<route>
+			<service name="File_system"> <child name="test_fs"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+	<start name="test-read_file" caps="200">
+		<resource name="RAM" quantum="8M"/>
+		<config>
+			<vfs>
+				<dir name="dir">
+					<fs label="dir"/>
+				</dir>
+			</vfs>
+		</config>
+		<route>
+			<service name="File_system"> <child name="test_fs"/> </service>
+			<any-service> <parent/> <any-child/> </any-service>
+		</route>
+	</start>
+</config>
+}
+
+install_config $config
+
+#
+# Boot modules
+#
+
+# generic modules
+set boot_modules {
+	test-file_change
+	test-read_file
+}
+
+build_boot_image $boot_modules
+
+# qemu config
+append qemu_args "  -nographic "
+
+run_genode_until {.*--- test succeeded ---.} 15
+
